@@ -1,18 +1,19 @@
 import {Router} from "express";
 import { login, register, getMe, updateProfile, changePassword, logout } from "../controllers/authController.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const authRoutes = Router();
 
-authRoutes.post("/register",register);
+authRoutes.post("/register",protect, register);
 
-authRoutes.post("/login", login); 
+authRoutes.post("/login",protect, login); 
 
-authRoutes.get("/me", getMe);
+authRoutes.get("/me", protect, getMe);
 
-authRoutes.put("/update-profile", updateProfile);                 
+authRoutes.put("/update-profile", protect, updateProfile);
 
-authRoutes.put("/change-password", changePassword);
+authRoutes.put("/change-password", protect, changePassword);
 
-authRoutes.post("/logout", logout);
+authRoutes.post("/logout", protect, logout);
 
 export default authRoutes;
