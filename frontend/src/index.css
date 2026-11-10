@@ -1,0 +1,65 @@
+/* Global theme tokens and shared layout styles for the hotel management app. */
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Poppins", sans-serif;
+  --color-primary: #F97316;
+  --color-primary-dark: #EA580C;
+  --color-primary-soft: #FFF3E8;
+  --color-ink: #111111;
+  --color-ink-soft: #1C1C1C;
+  --color-page: #F5F5F5;
+  --color-line: #E5E5E5;
+  --color-muted: #6B7280;
+}
+
+@layer base {
+  html, body, #root {
+    @apply h-dvh min-h-dvh overflow-hidden bg-page font-sans text-ink antialiased;
+  }
+
+  body {
+    @apply m-0 p-0;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    @apply focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2;
+  }
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+@media print {
+  .print-hide,
+  .print-hide * {
+    display: none !important;
+  }
+
+  body,
+  #root,
+  main,
+  .print-card {
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  .print-card {
+    border: 1px solid #e5e5e5 !important;
+    box-shadow: none !important;
+    page-break-inside: avoid;
+  }
+}

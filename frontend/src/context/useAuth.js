@@ -1,0 +1,9 @@
+/* Reads the current authentication context and guards against missing providers. */
+import { useContext } from "react";
+import AuthContext from "./authContext.js";
+
+export default function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) throw new Error("useAuth must be used within AuthProvider");
+  return context;
+}

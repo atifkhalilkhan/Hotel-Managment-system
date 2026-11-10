@@ -30,6 +30,11 @@ export const errorHandler = (err, req, res, next) => {
     message = `Invalid ${err.path}`;
   }
 
+  if (err.name === "MulterError") {
+  statusCode = 400;
+  message = err.message;
+}
+
   res.status(statusCode).json({
     message,
     stack: process.env.NODE_ENV === "development" ? err.stack : undefined,

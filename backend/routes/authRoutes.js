@@ -4,9 +4,9 @@ import { protect } from "../middleware/authMiddleware.js";
 
 const authRoutes = Router();
 
-authRoutes.post("/register",protect, register);
+authRoutes.post("/register", register);
 
-authRoutes.post("/login",protect, login); 
+authRoutes.post("/login", login); 
 
 authRoutes.get("/me", protect, getMe);
 
