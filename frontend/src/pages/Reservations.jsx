@@ -8,6 +8,7 @@ import ReservationDetailsModal from "../components/ReservationDetailsModal.jsx";
 import SearchInput from "../components/SearchInput.jsx";
 import { Alert, Button, Card, ConfirmDialog, EmptyState, IconButton, Input, PageHeader, Select, Table } from "../components/UI.jsx";
 import { formatDate, formatPrice, nightsLabel, reservationStatusOptions } from "../lib/reservationUtils.js";
+import useAuth from "../context/useAuth.js";
 
 const badgeTone = {
   confirmed: "warning",
@@ -17,6 +18,7 @@ const badgeTone = {
 };
 
 export default function Reservations() {
+  const { user } = useAuth();
   const [reservations, setReservations] = useState([]);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -30,9 +32,60 @@ export default function Reservations() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [selectedReservation, setSelectedReservation] = useState(null);
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [invoiceError, setInvoiceError] = useState("");
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [actionTarget, setActionTarget] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    const reservation = selectedReservation;
+    const timer = window.setTimeout(() => {
+      if (!reservation || !["checked-in", "checked-out"].includes(reservation.status)) {
+        setSelectedInvoice(null);
+        setInvoiceError("");
+        setInvoiceLoading(false);
+        return;
+      }
+
+      setSelectedInvoice(null);
+      setInvoiceError("");
+      setInvoiceLoading(true);
+      api.get(`/invoices?reservation=${encodeURIComponent(reservation._id)}&limit=1`)
+        .then((payload) => {
+          if (active) setSelectedInvoice(payload.invoices?.[0] || null);
+        })
+        .catch((requestError) => {
+          if (active) setInvoiceError(requestError.message || "Unable to check for an invoice.");
+        })
+        .finally(() => {
+          if (active) setInvoiceLoading(false);
+        });
+    }, 0);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [selectedReservation]);
+
+  const handleGenerateInvoice = async () => {
+    if (!selectedReservation) return;
+    setGeneratingInvoice(true);
+    setInvoiceError("");
+    try {
+      const created = await api.post("/invoices", { reservation: selectedReservation._id });
+      setSelectedInvoice(created);
+      setSuccess(`Invoice ${created.invoiceNumber} generated.`);
+    } catch (requestError) {
+      setInvoiceError(requestError.message || "Unable to generate invoice.");
+    } finally {
+      setGeneratingInvoice(false);
+    }
+  };
 
   const fetchReservations = useCallback(async () => {
     const requestId = ++requestIdRef.current;
@@ -237,14 +290,18 @@ export default function Reservations() {
               })}
             </div>
           </div>
-          <div className="flex flex-col gap-3 border-t border-line p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-sm text-muted">Showing {reservations.length ? (page - 1) * pageSize + 1 : 0}-{Math.min(page * pageSize, total)} of {total}</div>
-            <div className="flex items-center gap-3">
-              <Select className="min-w-[110px]" id="page-size" onChange={(event) => setPageSize(Number(event.target.value))} value={pageSize}>
-                {[10, 20, 50].map((size) => <option key={size} value={size}>{size} / page</option>)}
-              </Select>
-              <Pagination currentPage={page} onPageChange={setPage} totalPages={totalPages} />
-            </div>
+          <div className="px-4">
+            <Pagination
+              className="mt-0"
+              itemLabel="reservations"
+              onPageChange={setPage}
+              onPageSizeChange={(size) => { setPageSize(size); setPage(1); }}
+              page={page}
+              pageSize={pageSize}
+              pageSizeOptions={[10, 20, 50]}
+              totalItems={total}
+              totalPages={totalPages}
+            />
           </div>
         </Card>
       ) : (
@@ -274,9 +331,14 @@ export default function Reservations() {
         onCheckIn={() => handleAction("check-in", selectedReservation)}
         onCheckOut={() => handleAction("check-out", selectedReservation)}
         onClose={() => setSelectedReservation(null)}
+        onGenerateInvoice={handleGenerateInvoice}
         open={Boolean(selectedReservation)}
+        invoice={selectedInvoice}
+        invoiceError={invoiceError}
+        invoiceLoading={invoiceLoading}
+        generatingInvoice={generatingInvoice}
         reservation={selectedReservation}
-        userRole="admin"
+        userRole={user?.role}
       />
     </div>
   );

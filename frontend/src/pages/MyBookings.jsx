@@ -4,7 +4,7 @@ import { CalendarPlus, Eye, XCircle } from "lucide-react";
 import api from "../api/axios.js";
 import Link from "../components/Link.jsx";
 import ReservationDetailsModal from "../components/ReservationDetailsModal.jsx";
-import { Alert, Card, ConfirmDialog, EmptyState, IconButton, PageHeader } from "../components/UI.jsx";
+import { Alert, Button, Card, ConfirmDialog, EmptyState, IconButton, PageHeader } from "../components/UI.jsx";
 import { formatDate, formatPrice, nightsLabel } from "../lib/reservationUtils.js";
 
 const tabs = [
@@ -17,30 +17,57 @@ const tabs = [
 
 export default function MyBookings() {
   const [bookings, setBookings] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [invoiceError, setInvoiceError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
   const [tab, setTab] = useState("all");
+  const [payingInvoiceId, setPayingInvoiceId] = useState("");
 
   useEffect(() => {
     let mounted = true;
 
-    api.get("/reservations/my")
-      .then((list) => {
-        if (mounted) setBookings(list || []);
+    Promise.all([
+      api.get("/reservations/my"),
+      api.get("/invoices/my").catch((requestError) => {
+        if (mounted) setInvoiceError(requestError.message || "Unable to load invoices for your bookings.");
+        return [];
+      }),
+    ])
+      .then(([list, invoiceList]) => {
+        if (!mounted) return;
+        setBookings(list || []);
+        setInvoices(invoiceList || []);
       })
       .catch((requestError) => {
         if (mounted) setError(requestError.message || "Unable to load your bookings.");
       })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
+      .finally(() => { if (mounted) setLoading(false); });
 
     return () => {
       mounted = false;
     };
   }, []);
+
+  const invoiceForBooking = (bookingId) => invoices.find((invoice) => {
+    const reservationId = invoice.reservation?._id || invoice.reservation;
+    return String(reservationId) === String(bookingId);
+  });
+
+  const handlePayInvoice = async (invoice) => {
+    setPayingInvoiceId(invoice._id);
+    setInvoiceError("");
+    try {
+      const payload = await api.post("/payments/create-checkout-session", { invoiceId: invoice._id });
+      if (!payload?.url) throw new Error("Checkout session did not return a payment URL.");
+      window.location.assign(payload.url);
+    } catch (requestError) {
+      setInvoiceError(requestError.message || "Unable to start card payment.");
+      setPayingInvoiceId("");
+    }
+  };
 
   const filtered = useMemo(() => bookings.filter((booking) => {
     if (tab === "all") return true;
@@ -78,6 +105,7 @@ export default function MyBookings() {
       />
 
       {error && <Alert className="mb-4" onClose={() => setError("")}>{error}</Alert>}
+      {invoiceError && <Alert className="mb-4" onClose={() => setInvoiceError("")}>{invoiceError}</Alert>}
 
       <Card className="p-4 sm:p-5">
         <div className="flex flex-wrap gap-2">
@@ -122,6 +150,14 @@ export default function MyBookings() {
                   <IconButton ariaLabel={`View booking ${booking.bookingCode}`} onClick={() => setSelected(booking)} title="View booking">
                     <Eye className="h-4 w-4" />
                   </IconButton>
+                  {invoiceForBooking(booking._id) && (
+                    <>
+                      <Link className="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-white px-3 text-sm font-medium hover:bg-page" href={`/invoices/${invoiceForBooking(booking._id)._id}`}>View invoice</Link>
+                      {invoiceForBooking(booking._id).status === "unpaid" && (
+                        <Button className="h-11 min-h-11 px-3" loading={payingInvoiceId === invoiceForBooking(booking._id)._id} onClick={() => handlePayInvoice(invoiceForBooking(booking._id))} type="button">Pay now</Button>
+                      )}
+                    </>
+                  )}
                   {booking.status === "confirmed" && (
                     <IconButton ariaLabel={`Cancel booking ${booking.bookingCode}`} className="text-red-600 hover:border-red-300 hover:bg-red-50" onClick={() => setCancelTarget(booking)} title="Cancel booking">
                       <XCircle className="h-4 w-4" />
@@ -163,6 +199,9 @@ export default function MyBookings() {
         open={Boolean(selected)}
         reservation={selected}
         userRole="guest"
+        invoice={selected ? invoiceForBooking(selected._id) : null}
+        invoiceError={invoiceError}
+        invoiceLoading={false}
       />
     </div>
   );

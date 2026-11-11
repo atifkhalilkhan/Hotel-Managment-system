@@ -1,6 +1,7 @@
 /* Details modal for reservation records and actions. */
-import { CalendarCheck, CalendarDays, LogIn, LogOut, UserRound, XCircle } from "lucide-react";
-import { Button, Modal, Badge } from "./UI.jsx";
+import { CalendarCheck, CalendarDays, FileText, LogIn, LogOut, UserRound, XCircle } from "lucide-react";
+import Link from "./Link.jsx";
+import { Alert, Button, Modal, Badge } from "./UI.jsx";
 import { formatDate, formatPrice, nightsLabel, reservationStatusLabel } from "../lib/reservationUtils.js";
 
 const statusMeta = {
@@ -10,7 +11,7 @@ const statusMeta = {
   cancelled: { tone: "error", label: "Cancelled" },
 };
 
-export default function ReservationDetailsModal({ open, onClose, reservation, userRole, onCheckIn, onCheckOut, onCancel, onPrint }) {
+export default function ReservationDetailsModal({ open, onClose, reservation, userRole, onCheckIn, onCheckOut, onCancel, onPrint, invoice, invoiceLoading, invoiceError, onGenerateInvoice, generatingInvoice }) {
   if (!open || !reservation) return null;
 
   const room = reservation.room || {};
@@ -93,6 +94,25 @@ export default function ReservationDetailsModal({ open, onClose, reservation, us
           <div className="rounded-lg border border-line p-4">
             <p className="text-xs uppercase tracking-wide text-muted">Special requests</p>
             <p className="mt-2 text-sm">{reservation.specialRequests}</p>
+          </div>
+        )}
+
+        {["checked-in", "checked-out"].includes(reservation.status) && (
+          <div className="space-y-3 rounded-lg border border-line p-4">
+            <div className="flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary-dark" />
+              <p className="text-sm font-semibold">Invoice</p>
+            </div>
+            {invoiceError && <Alert>{invoiceError}</Alert>}
+            {invoiceLoading ? (
+              <p className="text-sm text-muted">Checking invoice...</p>
+            ) : invoice ? (
+              <Link className="inline-flex h-10 items-center justify-center rounded-lg border border-line bg-white px-3 text-sm font-medium hover:bg-page" href={`/invoices/${invoice._id}`}>
+                View invoice {invoice.invoiceNumber ? `(${invoice.invoiceNumber})` : ""}
+              </Link>
+            ) : ["admin", "receptionist"].includes(userRole) ? (
+              <Button loading={generatingInvoice} onClick={onGenerateInvoice} type="button">Generate invoice</Button>
+            ) : <p className="text-sm text-muted">No invoice has been generated.</p>}
           </div>
         )}
 

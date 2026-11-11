@@ -30,6 +30,7 @@ const api = {
   post: (path, data) => request(path, { method: "POST", data }),
   put: (path, data) => request(path, { method: "PUT", data }),
   patch: (path, data) => request(path, { method: "PATCH", data }),
+  delete: (path) => request(path, { method: "DELETE" }),
 };
 
 export default api;

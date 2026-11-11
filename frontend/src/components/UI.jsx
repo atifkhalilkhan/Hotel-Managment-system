@@ -4,13 +4,13 @@ import { AlertCircle, CheckCircle2, LoaderCircle, X } from "lucide-react";
 
 export function Button({ variant = "primary", loading = false, className = "", children, ...props }) {
   const variants = {
-    primary: "bg-primary text-white hover:bg-primary-dark",
-    dark: "bg-ink text-white hover:bg-ink-soft",
-    outline: "border border-line bg-white text-ink hover:bg-page",
-    danger: "bg-red-600 text-white hover:bg-red-700",
+    primary: "bg-primary text-white shadow-sm hover:bg-primary-dark hover:shadow-md",
+    dark: "bg-ink text-white shadow-sm hover:bg-ink-soft hover:shadow-md",
+    outline: "border border-line bg-white text-ink shadow-sm hover:bg-page hover:shadow",
+    danger: "bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md",
   };
   return (
-    <button {...props} className={`inline-flex h-11 min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`} disabled={loading || props.disabled}>
+    <button {...props} className={`inline-flex h-11 min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`} disabled={loading || props.disabled}>
       {loading && <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" />}
       {children}
     </button>
@@ -39,7 +39,7 @@ export function Select({ label, children, className = "", id, ...props }) {
 }
 
 export function Card({ className = "", children, ...props }) {
-  return <section className={`min-w-0 rounded-lg border border-line bg-white p-4 shadow-sm sm:p-5 ${className}`} {...props}>{children}</section>;
+  return <section className={`min-w-0 rounded-xl border border-line bg-white p-4 shadow-sm transition-shadow duration-200 hover:shadow-md sm:p-5 ${className}`} {...props}>{children}</section>;
 }
 
 export function Table({ headings, children }) {
@@ -123,7 +123,7 @@ export function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 md:items-center md:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section aria-labelledby="modal-title" aria-modal="true" className="max-h-[90dvh] w-full overflow-y-auto rounded-t-lg bg-white p-5 md:max-w-lg md:rounded-lg" role="dialog">
+      <section aria-labelledby="modal-title" aria-modal="true" className="max-h-[90dvh] w-full overflow-y-auto rounded-t-xl bg-white p-5 shadow-xl md:max-w-lg md:rounded-xl" role="dialog">
         <div className="mb-5 flex items-center justify-between gap-3"><h2 className="text-lg font-semibold" id="modal-title">{title}</h2><button aria-label="Close dialog" className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-page" onClick={onClose}><X className="h-5 w-5" /></button></div>
         {children}
       </section>

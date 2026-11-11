@@ -27,8 +27,13 @@ const managementItems = [
   { label: "Profile", href: "/profile", Icon: UserRound },
 ];
 
+const billingItems = [
+  { label: "Invoices", href: "/invoices", Icon: ReceiptText, roles: ["admin", "manager", "receptionist"] },
+  { label: "Billing Report", href: "/billing", Icon: BarChart3, roles: ["admin", "manager"] },
+  { label: "My Invoices", href: "/my-invoices", Icon: ReceiptText, roles: ["guest"] },
+];
+
 const soonItems = [
-  { label: "Billing", Icon: ReceiptText, roles: ["admin", "manager", "receptionist"] },
   { label: "Housekeeping", Icon: Building2, roles: ["admin", "manager", "housekeeping"] },
   { label: "Reports", Icon: BarChart3, roles: ["admin", "manager"] },
 ];
@@ -70,6 +75,7 @@ export default function Sidebar({ path, collapsed, drawerOpen, setDrawerOpen, cl
   }, [drawerOpen, setDrawerOpen]);
 
   const visibleManagementItems = managementItems.filter((item) => !item.roles || item.roles.includes(user?.role));
+  const visibleBillingItems = billingItems.filter((item) => item.roles.includes(user?.role));
   const visibleSoonItems = soonItems.filter((item) => item.roles.includes(user?.role));
 
   const linkClass = (active, compact) => {
@@ -118,6 +124,11 @@ export default function Sidebar({ path, collapsed, drawerOpen, setDrawerOpen, cl
         <section className="space-y-1">
           <p className={`px-3 pb-1 text-[10px] font-semibold tracking-[0.2em] text-white/40 ${collapsed ? "hidden" : "block"}`}>MANAGEMENT</p>
           {renderLinks(visibleManagementItems, collapsed)}
+        </section>
+
+        <section className="space-y-1">
+          <p className={`px-3 pb-1 text-[10px] font-semibold tracking-[0.2em] text-white/40 ${collapsed ? "hidden" : "block"}`}>BILLING</p>
+          {renderLinks(visibleBillingItems, collapsed)}
         </section>
 
         <section className="space-y-1">
@@ -207,6 +218,11 @@ export default function Sidebar({ path, collapsed, drawerOpen, setDrawerOpen, cl
           <section className="space-y-1">
             <p className="px-3 pb-1 text-[10px] font-semibold tracking-[0.2em] text-white/40">MANAGEMENT</p>
             {renderLinks(visibleManagementItems, false)}
+          </section>
+
+          <section className="space-y-1">
+            <p className="px-3 pb-1 text-[10px] font-semibold tracking-[0.2em] text-white/40">BILLING</p>
+            {renderLinks(visibleBillingItems, false)}
           </section>
 
           <section className="space-y-1">

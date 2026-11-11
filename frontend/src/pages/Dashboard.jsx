@@ -1,18 +1,12 @@
 ﻿/* Role-specific overview with live user and reservation statistics. */
 import { useEffect, useState } from "react";
-import { BedDouble, CalendarCheck, CreditCard, ShieldCheck, UserRound, Users, Wrench } from "lucide-react";
+import { CalendarCheck, CreditCard, ReceiptText, ShieldCheck, UserRound, Users, Wrench } from "lucide-react";
 import api from "../api/axios.js";
 import useAuth from "../context/useAuth.js";
 import Link from "../components/Link.jsx";
 import { Alert, Badge, Card, Loader } from "../components/UI.jsx";
 import { formatDate, formatPrice, nightsLabel } from "../lib/reservationUtils.js";
-
-const upcoming = [
-  { label: "Rooms", Icon: BedDouble },
-  { label: "Billing", Icon: CreditCard },
-  { label: "Housekeeping", Icon: Wrench },
-  { label: "Reports", Icon: ShieldCheck },
-];
+import { formatMoney } from "../lib/invoiceUtils.js";
 
 const reservationStatusTiles = [
   { key: "confirmed", label: "Confirmed" },
@@ -20,6 +14,19 @@ const reservationStatusTiles = [
   { key: "checked-out", label: "Checked out" },
   { key: "cancelled", label: "Cancelled" },
 ];
+
+function getRecentRevenueDays(daily) {
+  const amounts = new Map((daily || []).map((entry) => [entry.date, entry]));
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(today);
+    date.setUTCDate(today.getUTCDate() - 6 + index);
+    const key = date.toISOString().slice(0, 10);
+    return amounts.get(key) || { date: key, amount: 0, count: 0 };
+  });
+}
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -32,6 +39,9 @@ export default function Dashboard() {
   const [recentReservations, setRecentReservations] = useState([]);
   const [guestUpcoming, setGuestUpcoming] = useState(null);
   const [guestCurrent, setGuestCurrent] = useState(null);
+  const [invoiceStats, setInvoiceStats] = useState({ revenue: 0, outstanding: 0, unpaidCount: 0 });
+  const [revenueDaily, setRevenueDaily] = useState([]);
+  const [invoiceStatsLoading, setInvoiceStatsLoading] = useState(() => ["admin", "manager", "receptionist", "guest"].includes(user?.role));
 
   useEffect(() => {
     if (!isManager) return undefined;
@@ -70,6 +80,43 @@ export default function Dashboard() {
   }, [isStaff]);
 
   useEffect(() => {
+    const role = user?.role;
+    if (!["admin", "manager", "receptionist", "guest"].includes(role)) {
+      return undefined;
+    }
+
+    let active = true;
+    const loadInvoiceStats = async () => {
+      try {
+        if (["admin", "manager"].includes(role)) {
+          const report = await api.get("/invoices/report");
+          if (active) {
+            setInvoiceStats({
+              revenue: Number(report.revenue || 0),
+              outstanding: Number(report.summary?.unpaid?.amount || 0),
+              unpaidCount: Number(report.summary?.unpaid?.count || 0),
+            });
+            setRevenueDaily(report.daily || []);
+          }
+        } else if (role === "receptionist") {
+          const payload = await api.get("/invoices?status=unpaid&limit=1");
+          if (active) setInvoiceStats((stats) => ({ ...stats, unpaidCount: Number(payload.total || 0) }));
+        } else {
+          const invoices = await api.get("/invoices/my");
+          if (active) setInvoiceStats((stats) => ({ ...stats, unpaidCount: (invoices || []).filter((item) => item.status === "unpaid").length }));
+        }
+      } catch (requestError) {
+        if (active) setError(requestError.message || "Unable to load invoice summary.");
+      } finally {
+        if (active) setInvoiceStatsLoading(false);
+      }
+    };
+
+    loadInvoiceStats();
+    return () => { active = false; };
+  }, [user?.role]);
+
+  useEffect(() => {
     if (user?.role !== "guest") return undefined;
     let active = true;
     api.get("/reservations/my")
@@ -99,6 +146,16 @@ export default function Dashboard() {
     { title: "Current stay", booking: guestCurrent },
   ];
 
+  const invoiceCards = isManager
+    ? [
+      { label: "Revenue", value: invoiceStatsLoading ? "..." : formatMoney(invoiceStats.revenue), Icon: CreditCard, href: "/billing" },
+      { label: "Outstanding", value: invoiceStatsLoading ? "..." : formatMoney(invoiceStats.outstanding), Icon: CreditCard, href: "/billing" },
+      { label: "Unpaid invoices", value: invoiceStatsLoading ? "..." : invoiceStats.unpaidCount, Icon: ReceiptText, href: "/invoices" },
+    ]
+    : [{ label: "Unpaid invoices", value: invoiceStatsLoading ? "..." : invoiceStats.unpaidCount, Icon: ReceiptText, href: user?.role === "guest" ? "/my-invoices" : "/invoices" }];
+  const chartDays = getRecentRevenueDays(revenueDaily);
+  const maxDailyRevenue = Math.max(1, ...chartDays.map((day) => Number(day.amount || 0)));
+
   return (
     <div className="space-y-6">
       <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -107,7 +164,18 @@ export default function Dashboard() {
       </div>
 
       {user?.role === "guest" ? (
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-6">
+          <div className={`grid gap-4 ${invoiceCards.length > 1 ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
+            {invoiceCards.map(({ label, value, Icon, href }) => (
+              <Link className="block" href={href} key={label}>
+                <Card className="flex items-center gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary-dark"><Icon className="h-5 w-5" /></div>
+                  <div><p className="text-2xl font-semibold">{value}</p><p className="text-sm text-muted">{label}</p></div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
           {guestCards.map(({ title, booking }) => (
             <Card key={title}>
               <div className="flex items-center justify-between gap-3">
@@ -138,10 +206,49 @@ export default function Dashboard() {
               )}
             </Card>
           ))}
+          </div>
         </div>
       ) : isStaff ? (
         <div className="space-y-6">
           {error && <Alert>{error}</Alert>}
+          <div className={`grid gap-4 ${invoiceCards.length > 1 ? "md:grid-cols-3" : "md:grid-cols-1"}`}>
+            {invoiceCards.map(({ label, value, Icon, href }) => (
+              <Link className="block" href={href} key={label}>
+                <Card className="flex items-center gap-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary-dark"><Icon className="h-5 w-5" /></div>
+                  <div><p className="text-2xl font-semibold">{value}</p><p className="text-sm text-muted">{label}</p></div>
+                </Card>
+              </Link>
+            ))}
+          </div>
+          {isManager && (
+            <Card className="overflow-hidden">
+              <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+                <div>
+                  <h2 className="font-semibold">Revenue trend</h2>
+                  <p className="mt-1 text-sm text-muted">Daily payments over the last 7 days</p>
+                </div>
+                <Link className="text-sm font-medium text-primary-dark hover:underline" href="/billing">View billing report</Link>
+              </div>
+              <div aria-label="Revenue for the last seven days" className="grid h-48 grid-cols-7 items-end gap-2 sm:gap-4">
+                {chartDays.map((day) => {
+                  const amount = Number(day.amount || 0);
+                  const barHeight = Math.max(4, (amount / maxDailyRevenue) * 142);
+                  const date = new Date(`${day.date}T00:00:00Z`);
+                  const label = date.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", timeZone: "UTC" });
+                  return (
+                    <div className="group relative flex h-full flex-col items-center justify-end gap-2" key={day.date}>
+                      <div className="pointer-events-none absolute bottom-full z-10 mb-2 hidden whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-xs text-white shadow-lg group-hover:block group-focus-within:block">
+                        {formatMoney(amount)} · {day.count || 0} payments
+                      </div>
+                      <div aria-label={`${label}: ${formatMoney(amount)}`} className="w-full max-w-12 rounded-t-lg bg-primary transition-opacity hover:opacity-80" style={{ height: barHeight }} tabIndex={0} title={`${label}: ${formatMoney(amount)}`} />
+                      <span className="text-center text-[10px] text-muted sm:text-xs">{label}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+          )}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {reservationStats.map(({ key, label, value }) => (
               <Link className="block" href="/reservations" key={key}>
@@ -201,7 +308,6 @@ export default function Dashboard() {
         </div>
       )}
 
-      <Card><h2 className="font-semibold">Coming soon</h2><p className="mt-1 text-sm text-muted">More tools to support your stay and operations.</p><div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">{upcoming.map(({ label, Icon }) => <div className="flex min-w-0 items-center gap-2 rounded-lg border border-line p-3" key={label}><Icon className="h-5 w-5 shrink-0 text-muted" /><span className="truncate text-sm">{label}</span></div>)}</div></Card>
     </div>
   );
 }
