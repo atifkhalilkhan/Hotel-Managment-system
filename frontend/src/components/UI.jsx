@@ -1,16 +1,16 @@
 /* Reusable interface primitives that keep page styles consistent. */
 import { useEffect } from "react";
-import { AlertCircle, CheckCircle2, LoaderCircle, X } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info, LoaderCircle, X } from "lucide-react";
 
 export function Button({ variant = "primary", loading = false, className = "", children, ...props }) {
   const variants = {
-    primary: "bg-primary text-white shadow-sm hover:bg-primary-dark hover:shadow-md",
-    dark: "bg-ink text-white shadow-sm hover:bg-ink-soft hover:shadow-md",
-    outline: "border border-line bg-white text-ink shadow-sm hover:bg-page hover:shadow",
-    danger: "bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md",
+    primary: "bg-primary text-white hover:bg-primary-dark",
+    dark: "bg-ink text-white hover:bg-ink-soft",
+    outline: "border border-line bg-white text-ink hover:bg-page",
+    danger: "bg-red-600 text-white hover:bg-red-700",
   };
   return (
-    <button {...props} className={`inline-flex h-11 min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-all disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`} disabled={loading || props.disabled}>
+    <button {...props} className={`inline-flex h-11 min-h-11 items-center justify-center gap-2 rounded-lg px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${className}`} disabled={loading || props.disabled}>
       {loading && <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" />}
       {children}
     </button>
@@ -39,7 +39,7 @@ export function Select({ label, children, className = "", id, ...props }) {
 }
 
 export function Card({ className = "", children, ...props }) {
-  return <section className={`min-w-0 rounded-xl border border-line bg-white p-4 shadow-sm transition-shadow duration-200 hover:shadow-md sm:p-5 ${className}`} {...props}>{children}</section>;
+  return <section className={`min-w-0 rounded-lg border border-line bg-white p-4 shadow-sm sm:p-5 ${className}`} {...props}>{children}</section>;
 }
 
 export function Table({ headings, children }) {
@@ -90,9 +90,13 @@ export function Loader({ label = "Loading", fullPage = false }) {
 
 export function Alert({ children, type = "error", onClose, className = "" }) {
   const success = type === "success";
-  const Icon = success ? CheckCircle2 : AlertCircle;
+  const info = type === "info";
+  const Icon = success ? CheckCircle2 : info ? Info : AlertCircle;
+  const tone = success
+    ? "border-green-200 bg-green-50 text-green-700"
+    : info ? "border-primary/20 bg-primary-soft text-primary-dark" : "border-red-200 bg-red-50 text-red-600";
   return (
-    <div role={success ? "status" : "alert"} className={`flex items-start gap-2 rounded-lg border p-3 text-sm ${success ? "border-green-200 bg-green-50 text-green-600" : "border-red-200 bg-red-50 text-red-600"} ${className}`}>
+    <div role={success || info ? "status" : "alert"} className={`flex items-start gap-2 rounded-lg border p-3 text-sm ${tone} ${className}`}>
       <Icon aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
       <span className="min-w-0 flex-1 break-words">{children}</span>
       {onClose && <button aria-label="Dismiss message" className="rounded-lg p-1" onClick={onClose}><X className="h-4 w-4" /></button>}
@@ -100,12 +104,12 @@ export function Alert({ children, type = "error", onClose, className = "" }) {
   );
 }
 
-export function PageHeader({ title, description, action }) {
-  return <div className="mb-6 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div className="min-w-0"><h1 className="truncate text-xl font-semibold sm:text-2xl">{title}</h1>{description && <p className="mt-1 text-sm text-muted">{description}</p>}</div>{action}</div>;
+export function PageHeader({ title, description, action, icon: Icon }) {
+  return <div className="mb-6 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-end sm:justify-between"><div className="flex min-w-0 items-center gap-3">{Icon && <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary-dark"><Icon aria-hidden="true" className="h-5 w-5" /></span>}<div className="min-w-0"><h1 className="truncate text-xl font-semibold sm:text-2xl">{title}</h1>{description && <p className="mt-1 text-sm text-muted">{description}</p>}</div></div>{action}</div>;
 }
 
-export function EmptyState({ title = "Nothing here yet", description = "Try adjusting your filters." }) {
-  return <div className="rounded-lg border border-dashed border-line px-5 py-10 text-center"><p className="font-medium">{title}</p><p className="mt-1 text-sm text-muted">{description}</p></div>;
+export function EmptyState({ title = "Nothing here yet", description = "Try adjusting your filters.", icon: Icon }) {
+  return <div className="rounded-lg border border-dashed border-line px-5 py-10 text-center">{Icon && <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-lg bg-primary-soft text-primary-dark"><Icon aria-hidden="true" className="h-5 w-5" /></span>}<p className="font-medium">{title}</p><p className="mt-1 text-sm text-muted">{description}</p></div>;
 }
 
 export function Modal({ open, onClose, title, children }) {
@@ -123,7 +127,7 @@ export function Modal({ open, onClose, title, children }) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 md:items-center md:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section aria-labelledby="modal-title" aria-modal="true" className="max-h-[90dvh] w-full overflow-y-auto rounded-t-xl bg-white p-5 shadow-xl md:max-w-lg md:rounded-xl" role="dialog">
+      <section aria-labelledby="modal-title" aria-modal="true" className="max-h-[90dvh] w-full overflow-y-auto rounded-t-lg bg-white p-5 md:max-w-lg md:rounded-lg" role="dialog">
         <div className="mb-5 flex items-center justify-between gap-3"><h2 className="text-lg font-semibold" id="modal-title">{title}</h2><button aria-label="Close dialog" className="flex h-11 w-11 items-center justify-center rounded-lg hover:bg-page" onClick={onClose}><X className="h-5 w-5" /></button></div>
         {children}
       </section>
@@ -132,5 +136,5 @@ export function Modal({ open, onClose, title, children }) {
 }
 
 export function ConfirmDialog({ open, onClose, onConfirm, title, children, loading }) {
-  return <Modal open={open} onClose={onClose} title={title}><div className="space-y-5"><p className="text-sm text-muted">{children}</p><div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button variant="outline" onClick={onClose}>Cancel</Button><Button variant="danger" loading={loading} onClick={onConfirm}>Confirm</Button></div></div></Modal>;
+  return <Modal open={open} onClose={onClose} title={title}><div className="space-y-5"><div className="space-y-2 text-sm text-muted">{children}</div><div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end"><Button variant="outline" disabled={loading} onClick={onClose}>Cancel</Button><Button variant="danger" loading={loading} onClick={onConfirm}>Confirm</Button></div></div></Modal>;
 }

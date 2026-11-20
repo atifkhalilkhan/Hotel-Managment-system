@@ -44,7 +44,7 @@ export default function Pagination({
           <div className="hidden items-center gap-1 sm:flex">
             {getPageNumbers(safePage, safeTotalPages).map((item, index) =>
               item === "..." ? <span className="px-2 text-sm text-muted" key={`ellipsis-${index}`}>…</span> : (
-                <button aria-current={item === safePage ? "page" : undefined} className={`h-10 min-w-10 rounded-lg px-3 text-sm font-medium transition-colors ${item === safePage ? "bg-primary text-white shadow-sm" : "border border-line bg-white text-ink hover:border-primary hover:bg-primary-soft"}`} key={`page-${item}`} onClick={() => onPageChange(item)} type="button">{item}</button>
+                <button aria-current={item === safePage ? "page" : undefined} className={`h-10 min-w-10 rounded-lg px-3 text-sm font-medium transition-colors ${item === safePage ? "bg-primary text-white" : "border border-line bg-white text-ink hover:border-primary hover:bg-primary-soft"}`} key={`page-${item}`} onClick={() => onPageChange(item)} type="button">{item}</button>
               )
             )}
           </div>

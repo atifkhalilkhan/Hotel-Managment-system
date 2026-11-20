@@ -1,19 +1,55 @@
 /* Modal that shows a room’s photo gallery, details, and action buttons. */
-import { CalendarDays, ChevronLeft, ChevronRight, Layers3, Users, WalletCards } from "lucide-react";
-import { useMemo, useState } from "react";
-import { Badge, Button, Modal } from "./UI.jsx";
+import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Layers3, Users, WalletCards } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import api from "../api/axios.js";
+import Link from "./Link.jsx";
+import { Alert, Badge, Button, Modal } from "./UI.jsx";
+import ReportIssueModal from "./ReportIssueModal.jsx";
+import { MaintenanceStatusBadge } from "./OperationBadges.jsx";
 import { formatPrice, getAmenityIcon, getRoomStatusMeta, getRoomTypeLabel } from "../lib/roomUtils.js";
 
 export default function RoomDetailsModal({ room, open, onClose, role, onEdit, onStatusChange, onDelete }) {
   const [index, setIndex] = useState(0);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [tickets, setTickets] = useState([]);
+  const [ticketRoomId, setTicketRoomId] = useState("");
+  const [ticketsLoading, setTicketsLoading] = useState(false);
+  const [ticketError, setTicketError] = useState("");
+  const [reportSuccess, setReportSuccess] = useState("");
   const images = room?.images || [];
   const statusMeta = getRoomStatusMeta(room?.status);
   const StatusIcon = statusMeta.icon;
   const canEdit = ["admin", "manager"].includes(role);
   const canDelete = role === "admin";
   const canChange = ["admin", "manager", "receptionist", "housekeeping"].includes(role);
+  const canReportIssue = ["admin", "manager", "receptionist", "housekeeping"].includes(role);
+  const canViewTickets = ["admin", "manager", "receptionist"].includes(role);
 
   const amenities = useMemo(() => room?.amenities || [], [room]);
+
+  useEffect(() => {
+    if (!open || !room?._id || !canViewTickets) return undefined;
+    let active = true;
+    const timer = window.setTimeout(() => {
+      setTicketsLoading(true);
+      setTicketError("");
+      api.get(`/maintenance?room=${encodeURIComponent(room._id)}&status=open&limit=5`)
+        .then((payload) => {
+          if (active) {
+            setTickets(payload.requests || []);
+            setTicketRoomId(room._id);
+          }
+        })
+        .catch((requestError) => {
+          if (active) setTicketError(requestError.message || "Unable to load open maintenance tickets.");
+        })
+        .finally(() => { if (active) setTicketsLoading(false); });
+    }, 0);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [canViewTickets, open, room?._id]);
 
   if (!room) return null;
 
@@ -60,12 +96,32 @@ export default function RoomDetailsModal({ room, open, onClose, role, onEdit, on
             {amenities.length ? amenities.map((amenity) => { const Icon = getAmenityIcon(amenity); return <span className="inline-flex items-center gap-1 rounded-full border border-line bg-page px-2 py-1 text-xs font-medium" key={amenity}><Icon className="h-3.5 w-3.5" />{amenity}</span>; }) : <span className="text-sm text-muted">No amenities listed.</span>}
           </div>
         </div>
+        {canViewTickets && ticketRoomId === room._id && !ticketsLoading && tickets.length > 0 && (
+          <div className="space-y-3 rounded-lg border border-line p-4">
+            <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Open maintenance tickets</h3><Link className="text-sm font-medium text-primary-dark hover:underline" href="/maintenance">View all</Link></div>
+            <div className="divide-y divide-line">
+              {tickets.map((ticket) => <Link className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0" href="/maintenance" key={ticket._id}>
+                <span className="min-w-0"><span className="block text-xs text-muted">{ticket.ticketNumber}</span><span className="block truncate text-sm font-medium">{ticket.title}</span></span><MaintenanceStatusBadge status={ticket.status} />
+              </Link>)}
+            </div>
+          </div>
+        )}
+        {ticketError && canViewTickets && <Alert>{ticketError}</Alert>}
+        {reportSuccess && <Alert onClose={() => setReportSuccess("")} type="success">{reportSuccess}</Alert>}
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          {canReportIssue && <Button onClick={() => setReportOpen(true)} type="button" variant="outline"><AlertTriangle className="h-4 w-4" />Report issue</Button>}
           {canEdit && <Button onClick={onEdit} type="button" variant="outline">Edit</Button>}
           {canChange && <Button onClick={onStatusChange} type="button">Change status</Button>}
           {canDelete && <Button onClick={onDelete} type="button" variant="danger">Delete</Button>}
         </div>
       </div>
+      <ReportIssueModal
+        initialRoom={room}
+        onClose={() => setReportOpen(false)}
+        onCreated={(created) => setReportSuccess(`Report ${created.ticketNumber} submitted.`)}
+        open={reportOpen}
+        role={role}
+      />
     </Modal>
   );
 }

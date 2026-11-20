@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import User from "../models/User.js";
 import generateToken from "../utils/generateToken.js";
+import { uploadToCloudinary, deleteFromCloudinary } from "../utils/uploadToCloudinary.js";
 
 export const register = async (req, res) => {
   try {
@@ -63,6 +64,7 @@ export const login = async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      avatar: user.avatar,
       token: generateToken(user._id),
     });
   } catch (error) {
@@ -71,33 +73,79 @@ export const login = async (req, res) => {
 };
 
 export const getMe = async (req, res) => {
-  const { _id, name, email, role, phone, isActive } = req.user;
-  res.json({ _id, name, email, role, phone, isActive });
+  const { _id, name, email, role, phone, isActive, avatar, address, city, country, preferences } = req.user;
+  res.json({ _id, name, email, role, phone, isActive, avatar, address, city, country, preferences });
 };
 
-export const updateProfile = async (req, res) => {
-  try {
-    const { name, phone } = req.body;
+const PREF_KEYS = ["roomType", "bedType", "smoking", "dietary", "notes"];
 
+const parseObject = (value) => {
+  if (!value) return null;
+  if (typeof value === "object") return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
+};
+
+export const updateProfile = async (req, res, next) => {
+  try {
     const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (name) user.name = name;
-    if (phone) user.phone = phone;
+    const { name, phone, address, city, country } = req.body;
 
-    const updated = await user.save();
+    if (name !== undefined) {
+      if (!name.trim()) {
+        return res.status(400).json({ message: "Name cannot be empty" });
+      }
+      user.name = name;
+    }
+    if (phone !== undefined) user.phone = phone;
+    if (address !== undefined) user.address = address;
+    if (city !== undefined) user.city = city;
+    if (country !== undefined) user.country = country;
 
-    res.json({
-      _id: updated._id,
-      name: updated.name,
-      email: updated.email,
-      phone: updated.phone,
-      role: updated.role,
-    });
+    const prefs = parseObject(req.body.preferences);
+    if (prefs) {
+      for (const key of PREF_KEYS) {
+        if (prefs[key] === undefined) continue;
+        user.set(`preferences.${key}`, prefs[key] === "" ? undefined : prefs[key]);
+      }
+    }
+
+    let uploaded = null;
+    let oldAvatarId = null;
+
+    if (req.file) {
+      uploaded = await uploadToCloudinary(req.file.buffer, "luxurystay/avatars", {
+        transformation: [{ width: 400, height: 400, crop: "fill", gravity: "face" }],
+      });
+      oldAvatarId = user.avatar?.publicId;
+      user.set("avatar", { url: uploaded.url, publicId: uploaded.publicId });
+    } else if (req.body.removeAvatar === "true" || req.body.removeAvatar === true) {
+      oldAvatarId = user.avatar?.publicId;
+      user.set("avatar.url", undefined);
+      user.set("avatar.publicId", undefined);
+    }
+
+    let updated;
+    try {
+      updated = await user.save();
+    } catch (error) {
+      if (uploaded) await deleteFromCloudinary(uploaded.publicId);
+      throw error;
+    }
+
+    if (oldAvatarId) await deleteFromCloudinary(oldAvatarId);
+
+    const { password, ...safe } = updated.toObject();
+    res.json(safe);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    next(error);
   }
 };
 

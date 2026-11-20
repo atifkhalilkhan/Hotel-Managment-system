@@ -71,6 +71,9 @@ export const getUserById = async (req, res, next) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
+    if (req.user.role === "receptionist" && user.role !== "guest") {
+      return res.status(403).json({ message: "Receptionists can only view guest profiles" });
+    }
     res.json(user);
   } catch (error) {
     next(error);

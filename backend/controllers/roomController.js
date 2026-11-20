@@ -1,7 +1,9 @@
 import Room from "../models/Room.js";
 import { uploadToCloudinary, deleteFromCloudinary } from "../utils/uploadToCloudinary.js";
 import Reservation from "../models/Reservation.js";
+import HotelSettings from "../models/HotelSettings.js";
 const STATUSES = ["available", "occupied", "cleaning", "maintenance"];
+const ROOM_TYPES = ["single", "double", "deluxe", "suite"];
 const MAX_IMAGES = 5;
 
 // ---------- Helper: form-data se list nikalna ----------
@@ -27,8 +29,18 @@ export const createRoom = async (req, res, next) => {
   try {
     const { roomNumber, type, pricePerNight, floor, capacity, status, description } = req.body;
 
-    if (!roomNumber || !type || !pricePerNight || !floor || !capacity) {
+    let resolvedPrice = pricePerNight;
+    if ((resolvedPrice === undefined || resolvedPrice === null || resolvedPrice === "") && ROOM_TYPES.includes(type)) {
+      const settings = await HotelSettings.findOne({ key: "default" }).select("roomRates").lean();
+      resolvedPrice = settings?.roomRates?.[type];
+    }
+
+    if (!roomNumber || !ROOM_TYPES.includes(type) || resolvedPrice === undefined || resolvedPrice === null || resolvedPrice === "" || floor === undefined || floor === "" || capacity === undefined || capacity === "") {
       return res.status(400).json({ message: "Room number, type, price, floor and capacity are required" });
+    }
+    const parsedPrice = Number(resolvedPrice);
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      return res.status(400).json({ message: "Price per night must be a non-negative number" });
     }
 
     // Tasveer upload karne se PEHLE duplicate check, taake bekaar upload na ho
@@ -48,7 +60,7 @@ export const createRoom = async (req, res, next) => {
       room = await Room.create({
         roomNumber,
         type,
-        pricePerNight,
+        pricePerNight: parsedPrice,
         floor,
         capacity,
         status,
@@ -117,6 +129,39 @@ export const getRooms = async (req, res, next) => {
       pages: Math.ceil(total / limit),
       total,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Public website catalog: expose guest-facing room details only.
+export const getPublicRooms = async (req, res, next) => {
+  try {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 12, 1), 50);
+    const filter = { status: { $ne: "maintenance" } };
+
+    if (ROOM_TYPES.includes(req.query.type)) filter.type = req.query.type;
+    if (req.query.minPrice !== undefined || req.query.maxPrice !== undefined) {
+      const minPrice = req.query.minPrice === undefined ? 0 : Number(req.query.minPrice);
+      const maxPrice = req.query.maxPrice === undefined ? Number.MAX_SAFE_INTEGER : Number(req.query.maxPrice);
+      if (!Number.isFinite(minPrice) || !Number.isFinite(maxPrice) || minPrice < 0 || maxPrice < minPrice) {
+        return res.status(400).json({ message: "Invalid public room price range." });
+      }
+      filter.pricePerNight = { $gte: minPrice, $lte: maxPrice };
+    }
+
+    const [rooms, total] = await Promise.all([
+      Room.find(filter)
+        .select("type pricePerNight capacity description amenities images.url")
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+      Room.countDocuments(filter),
+    ]);
+
+    res.json({ rooms, page, pages: Math.ceil(total / limit), total });
   } catch (error) {
     next(error);
   }

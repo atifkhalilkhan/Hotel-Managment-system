@@ -118,12 +118,18 @@ export default function Reservations() {
     return () => window.clearTimeout(timer);
   }, [fetchReservations]);
 
-  const handleAction = async (type, reservation) => {
+  const handleAction = async (type, reservation, requestedKeyCardNumber = "") => {
     const endpoint = type === "check-in" ? "/check-in" : type === "check-out" ? "/check-out" : "/cancel";
     setSubmitting(true);
     try {
-      const payload = await api.patch(`/reservations/${reservation._id}${endpoint}`);
-      setSuccess(payload.message || "Reservation updated successfully.");
+      const data = type === "check-in" && requestedKeyCardNumber ? { keyCardNumber: requestedKeyCardNumber } : undefined;
+      const payload = await api.patch(`/reservations/${reservation._id}${endpoint}`, data);
+      const message = payload.message || "Reservation updated successfully.";
+      setSuccess(type === "check-out"
+        ? `${message} A cleaning task was created for Room ${reservation.room?.roomNumber || "-"}.`
+        : type === "check-in" && payload.reservation?.keyCardNumber
+          ? `${message} Key card: ${payload.reservation.keyCardNumber}.`
+          : message);
       setSelectedReservation(null);
       setActionTarget(null);
       await fetchReservations();
@@ -324,11 +330,12 @@ export default function Reservations() {
       </ConfirmDialog>
 
       <ReservationDetailsModal
+        key={selectedReservation?._id || "reservation-details"}
         onCancel={() => {
           if (selectedReservation?.status === "confirmed") setActionTarget(selectedReservation);
           setSelectedReservation(null);
         }}
-        onCheckIn={() => handleAction("check-in", selectedReservation)}
+        onCheckIn={(keyCardNumber) => handleAction("check-in", selectedReservation, keyCardNumber)}
         onCheckOut={() => handleAction("check-out", selectedReservation)}
         onClose={() => setSelectedReservation(null)}
         onGenerateInvoice={handleGenerateInvoice}

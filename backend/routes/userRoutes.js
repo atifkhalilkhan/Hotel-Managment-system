@@ -13,7 +13,7 @@ const userRoutes = Router();
 
 userRoutes.post("/", protect, authorize("admin", "receptionist"), createUser);
 userRoutes.get("/", protect, authorize("admin", "manager", "receptionist"), getUsers);
-userRoutes.get("/:id", protect, authorize("admin", "manager"), getUserById);
+userRoutes.get("/:id", protect, authorize("admin", "manager", "receptionist"), getUserById);
 userRoutes.put("/:id", protect, authorize("admin"), updateUser);
 userRoutes.patch("/:id/status", protect, authorize("admin"), toggleUserStatus);
 

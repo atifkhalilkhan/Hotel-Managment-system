@@ -88,12 +88,17 @@ export default function Invoices() {
               value={search}
             />
           </div>
-          <div className="w-full max-w-[220px]">
-            <Select id="invoice-status" label="Status" onChange={(event) => { setStatus(event.target.value); setPage(1); }} value={status}>
-              {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-            </Select>
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 lg:flex lg:shrink-0">
+            <div className="min-w-0 lg:w-[220px]">
+              <Select id="invoice-status" label="Status" onChange={(event) => { setStatus(event.target.value); setPage(1); }} value={status}>
+                {statusOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </Select>
+            </div>
+            <Button className="whitespace-nowrap px-3" onClick={clearFilters} type="button" variant="outline">
+              <span className="sm:hidden">Clear</span>
+              <span className="hidden sm:inline">Clear filters</span>
+            </Button>
           </div>
-          <Button onClick={clearFilters} type="button" variant="outline">Clear filters</Button>
         </div>
       </Card>
 
@@ -109,39 +114,81 @@ export default function Invoices() {
         </Card>
       ) : invoices.length ? (
         <Card className="p-0">
-          <Table headings={["Invoice", "Reservation", "Guest", "Amount", "Status", "Actions"]}>
+          <div className="hidden md:block">
+            <Table headings={["Invoice", "Reservation", "Guest", "Amount", "Status", "Actions"]}>
+              {invoices.map((invoice) => {
+                const statusMeta = getInvoiceStatusMeta(invoice.status);
+                return (
+                  <tr key={invoice._id}>
+                    <td className="px-4 py-3 align-middle">
+                      <p className="font-semibold">{invoice.invoiceNumber}</p>
+                      <p className="text-xs text-muted">{formatDateTime(invoice.createdAt)}</p>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <p className="font-medium">{invoice.reservation?.bookingCode || "-"}</p>
+                      <p className="text-xs text-muted">{invoice.reservation?.room?.roomNumber ? `Room ${invoice.reservation.room.roomNumber}` : "No room"}</p>
+                    </td>
+                    <td className="px-4 py-3 align-middle">
+                      <p className="font-medium">{invoice.guest?.name || "Guest"}</p>
+                      <p className="text-xs text-muted">{invoice.guest?.phone || invoice.guest?.email || "-"}</p>
+                    </td>
+                    <td className="px-4 py-3 align-middle font-medium">{formatMoney(invoice.total)}</td>
+                    <td className="px-4 py-3 align-middle"><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></td>
+                    <td className="px-4 py-3 align-middle">
+                      <div className="flex items-center gap-2">
+                        <Link className="inline-flex h-10 items-center gap-2 rounded-lg border border-line bg-white px-3 text-sm font-medium hover:bg-page" href={`/invoices/${invoice._id}`}>
+                          <Eye className="h-4 w-4" /> View
+                        </Link>
+                        <Button className="h-10 min-h-10 px-3" loading={downloadingId === invoice._id} onClick={() => handleDownload(invoice)} type="button" variant="outline">
+                          <Download className="h-4 w-4" /> PDF
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </Table>
+          </div>
+          <div className="divide-y divide-line md:hidden">
             {invoices.map((invoice) => {
               const statusMeta = getInvoiceStatusMeta(invoice.status);
               return (
-                <tr key={invoice._id}>
-                  <td className="px-4 py-3 align-middle">
-                    <p className="font-semibold">{invoice.invoiceNumber}</p>
-                    <p className="text-xs text-muted">{formatDateTime(invoice.createdAt)}</p>
-                  </td>
-                  <td className="px-4 py-3 align-middle">
-                    <p className="font-medium">{invoice.reservation?.bookingCode || "-"}</p>
-                    <p className="text-xs text-muted">{invoice.reservation?.room?.roomNumber ? `Room ${invoice.reservation.room.roomNumber}` : "No room"}</p>
-                  </td>
-                  <td className="px-4 py-3 align-middle">
-                    <p className="font-medium">{invoice.guest?.name || "Guest"}</p>
-                    <p className="text-xs text-muted">{invoice.guest?.phone || invoice.guest?.email || "-"}</p>
-                  </td>
-                  <td className="px-4 py-3 align-middle font-medium">{formatMoney(invoice.total)}</td>
-                  <td className="px-4 py-3 align-middle"><Badge tone={statusMeta.tone}>{statusMeta.label}</Badge></td>
-                  <td className="px-4 py-3 align-middle">
-                    <div className="flex items-center gap-2">
-                      <Link className="inline-flex h-10 items-center gap-2 rounded-lg border border-line bg-white px-3 text-sm font-medium hover:bg-page" href={`/invoices/${invoice._id}`}>
-                        <Eye className="h-4 w-4" /> View
-                      </Link>
-                      <Button className="h-10 min-h-10 px-3" loading={downloadingId === invoice._id} onClick={() => handleDownload(invoice)} type="button" variant="outline">
-                        <Download className="h-4 w-4" /> PDF
-                      </Button>
+                <article className="space-y-3 p-4" key={invoice._id}>
+                  <div className="flex min-w-0 items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="break-all text-sm font-semibold">{invoice.invoiceNumber}</p>
+                      <p className="mt-0.5 text-xs text-muted">{formatDateTime(invoice.createdAt)}</p>
                     </div>
-                  </td>
-                </tr>
+                    <Badge tone={statusMeta.tone}>{statusMeta.label}</Badge>
+                  </div>
+                  <div className="grid min-w-0 grid-cols-2 gap-3 text-sm">
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted">Reservation</p>
+                      <p className="truncate font-medium">{invoice.reservation?.bookingCode || "-"}</p>
+                      <p className="truncate text-xs text-muted">{invoice.reservation?.room?.roomNumber ? `Room ${invoice.reservation.room.roomNumber}` : "No room"}</p>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs text-muted">Guest</p>
+                      <p className="truncate font-medium">{invoice.guest?.name || "Guest"}</p>
+                      <p className="truncate text-xs text-muted">{invoice.guest?.phone || invoice.guest?.email || "-"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between border-t border-line pt-3">
+                    <span className="text-sm text-muted">Amount</span>
+                    <span className="font-semibold">{formatMoney(invoice.total)}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-line bg-white px-3 text-sm font-medium hover:bg-page" href={`/invoices/${invoice._id}`}>
+                      <Eye className="h-4 w-4" /> View
+                    </Link>
+                    <Button className="w-full px-3" loading={downloadingId === invoice._id} onClick={() => handleDownload(invoice)} type="button" variant="outline">
+                      <Download className="h-4 w-4" /> PDF
+                    </Button>
+                  </div>
+                </article>
               );
             })}
-          </Table>
+          </div>
           <div className="px-4">
             <Pagination
               className="mt-0"

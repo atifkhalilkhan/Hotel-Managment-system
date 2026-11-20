@@ -31,6 +31,20 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    avatar: {
+      url: { type: String },
+      publicId: { type: String },
+    },
+    address: { type: String, trim: true, maxlength: [200, "Address is too long"] },
+    city: { type: String, trim: true, maxlength: [60, "City is too long"] },
+    country: { type: String, trim: true, maxlength: [60, "Country is too long"] },
+    preferences: {
+      roomType: { type: String, enum: ["single", "double", "deluxe", "suite"] },
+      bedType: { type: String, enum: ["single", "double", "king", "twin"] },
+      smoking: { type: Boolean, default: false },
+      dietary: { type: String, trim: true, maxlength: [200, "Dietary note is too long"] },
+      notes: { type: String, trim: true, maxlength: [500, "Notes are too long"] },
+    },
   },
   { timestamps: true }
 );

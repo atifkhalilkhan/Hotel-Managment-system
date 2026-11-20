@@ -1,10 +1,11 @@
 /* Guest reservation list showing upcoming, current, and past stays. */
 import { useEffect, useMemo, useState } from "react";
-import { CalendarPlus, Eye, XCircle } from "lucide-react";
+import { CalendarPlus, Eye, MessageSquareQuote, XCircle } from "lucide-react";
 import api from "../api/axios.js";
 import Link from "../components/Link.jsx";
 import ReservationDetailsModal from "../components/ReservationDetailsModal.jsx";
-import { Alert, Button, Card, ConfirmDialog, EmptyState, IconButton, PageHeader } from "../components/UI.jsx";
+import GuestFeedbackModal from "../components/GuestFeedbackModal.jsx";
+import { Alert, Badge, Button, Card, ConfirmDialog, EmptyState, IconButton, PageHeader } from "../components/UI.jsx";
 import { formatDate, formatPrice, nightsLabel } from "../lib/reservationUtils.js";
 
 const tabs = [
@@ -19,12 +20,15 @@ export default function MyBookings() {
   const [bookings, setBookings] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [invoiceError, setInvoiceError] = useState("");
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [feedbackError, setFeedbackError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState(null);
   const [cancelTarget, setCancelTarget] = useState(null);
   const [tab, setTab] = useState("all");
   const [payingInvoiceId, setPayingInvoiceId] = useState("");
+  const [feedbackReservation, setFeedbackReservation] = useState(null);
 
   useEffect(() => {
     let mounted = true;
@@ -35,11 +39,16 @@ export default function MyBookings() {
         if (mounted) setInvoiceError(requestError.message || "Unable to load invoices for your bookings.");
         return [];
       }),
+      api.get("/feedback/my").catch((requestError) => {
+        if (mounted) setFeedbackError(requestError.message || "Unable to load your feedback history.");
+        return [];
+      }),
     ])
-      .then(([list, invoiceList]) => {
+      .then(([list, invoiceList, feedbackList]) => {
         if (!mounted) return;
         setBookings(list || []);
         setInvoices(invoiceList || []);
+        setFeedbacks(feedbackList || []);
       })
       .catch((requestError) => {
         if (mounted) setError(requestError.message || "Unable to load your bookings.");
@@ -53,6 +62,11 @@ export default function MyBookings() {
 
   const invoiceForBooking = (bookingId) => invoices.find((invoice) => {
     const reservationId = invoice.reservation?._id || invoice.reservation;
+    return String(reservationId) === String(bookingId);
+  });
+
+  const feedbackForBooking = (bookingId) => feedbacks.find((feedback) => {
+    const reservationId = feedback.reservation?._id || feedback.reservation;
     return String(reservationId) === String(bookingId);
   });
 
@@ -106,6 +120,7 @@ export default function MyBookings() {
 
       {error && <Alert className="mb-4" onClose={() => setError("")}>{error}</Alert>}
       {invoiceError && <Alert className="mb-4" onClose={() => setInvoiceError("")}>{invoiceError}</Alert>}
+      {feedbackError && <Alert className="mb-4" onClose={() => setFeedbackError("")}>{feedbackError}</Alert>}
 
       <Card className="p-4 sm:p-5">
         <div className="flex flex-wrap gap-2">
@@ -142,6 +157,12 @@ export default function MyBookings() {
                   <p>{formatDate(booking.checkIn)} → {formatDate(booking.checkOut)}</p>
                   <p>{nightsLabel(booking.nights || 0)} · {booking.guestsCount} guests</p>
                 </div>
+                {booking.keyCardNumber && (
+                  <div className="rounded-lg border border-primary/20 bg-primary-soft px-3 py-2">
+                    <p className="text-xs text-primary-dark">Key card</p>
+                    <p className="font-semibold text-primary-dark">{booking.keyCardNumber}</p>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm text-muted">Code: {booking.bookingCode}</p>
                   <p className="font-semibold">{formatPrice(booking.totalAmount || 0)}</p>
@@ -163,6 +184,13 @@ export default function MyBookings() {
                       <XCircle className="h-4 w-4" />
                     </IconButton>
                   )}
+                  {booking.status === "checked-out" && (feedbackForBooking(booking._id) ? (
+                    <Badge tone={feedbackForBooking(booking._id).status === "approved" ? "success" : feedbackForBooking(booking._id).status === "rejected" ? "error" : "warning"}>
+                      Feedback {feedbackForBooking(booking._id).status === "pending" ? "pending review" : feedbackForBooking(booking._id).status}
+                    </Badge>
+                  ) : (
+                    <Button className="h-11 min-h-11 px-3" onClick={() => setFeedbackReservation(booking)} type="button" variant="outline"><MessageSquareQuote className="h-4 w-4" />Leave feedback</Button>
+                  ))}
                 </div>
               </div>
             </Card>
@@ -202,6 +230,16 @@ export default function MyBookings() {
         invoice={selected ? invoiceForBooking(selected._id) : null}
         invoiceError={invoiceError}
         invoiceLoading={false}
+      />
+      <GuestFeedbackModal
+        key={feedbackReservation?._id || "feedback-closed"}
+        onClose={() => setFeedbackReservation(null)}
+        onCreated={(created) => {
+          setFeedbacks((items) => [...items, created]);
+          setFeedbackReservation(null);
+        }}
+        open={Boolean(feedbackReservation)}
+        reservation={feedbackReservation}
       />
     </div>
   );

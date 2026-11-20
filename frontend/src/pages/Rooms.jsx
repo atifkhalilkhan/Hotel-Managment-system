@@ -200,7 +200,7 @@ export default function Rooms() {
 
       {loading ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, index) => <Card className="p-0" key={index}><div className="aspect-[4/3] animate-pulse bg-page" /><div className="space-y-3 p-4"><div className="h-4 w-24 animate-pulse rounded bg-page" /><div className="h-4 w-20 animate-pulse rounded bg-page" /><div className="h-8 w-32 animate-pulse rounded bg-page" /></div></Card>)}
+          {Array.from({ length: 8 }).map((_, index) => <Card className="overflow-hidden p-0" key={index}><div className="h-44 animate-pulse bg-page sm:h-48" /><div className="space-y-3 p-4"><div className="h-4 w-24 animate-pulse rounded bg-page" /><div className="h-4 w-20 animate-pulse rounded bg-page" /><div className="h-8 w-32 animate-pulse rounded bg-page" /></div></Card>)}
         </div>
       ) : error ? (
         <Card className="space-y-4"><Alert>{error}</Alert><Button onClick={fetchRooms} type="button">Retry</Button></Card>

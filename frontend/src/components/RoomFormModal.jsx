@@ -1,6 +1,7 @@
 /* Reusable room form for add and edit actions. */
 import { Banknote, Hash, Layers3, Plus, UploadCloud, Users, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import api from "../api/axios.js";
 import { amenityOptions, getStatusOptionsForRole, roomTypeOptions } from "../lib/roomUtils.js";
 import { Alert, Button, Input, Modal, Select, Textarea } from "./UI.jsx";
 
@@ -38,8 +39,30 @@ function RoomFormContent({ mode, room, role, onClose, onSubmit }) {
   const [removeExisting, setRemoveExisting] = useState([]);
   const [submitError, setSubmitError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [roomRateDefaults, setRoomRateDefaults] = useState(null);
 
   const statusOptionsForRole = useMemo(() => getStatusOptionsForRole(role), [role]);
+
+  useEffect(() => {
+    if (mode !== "add") return undefined;
+    let active = true;
+    api.get("/settings")
+      .then((settings) => {
+        if (!active) return;
+        const defaults = settings.roomRates || {};
+        setRoomRateDefaults(defaults);
+        setForm((current) => {
+          const rate = defaults[current.type];
+          return current.pricePerNight === "" && rate !== null && rate !== undefined
+            ? { ...current, pricePerNight: String(rate) }
+            : current;
+        });
+      })
+      .catch((error) => {
+        if (active) setSubmitError(error.message || "Unable to load default room rates. Enter the room rate manually.");
+      });
+    return () => { active = false; };
+  }, [mode]);
 
   const toggleAmenity = (item) => {
     setForm((current) => ({ ...current, amenities: current.amenities.includes(item) ? current.amenities.filter((value) => value !== item) : [...current.amenities, item] }));
@@ -100,7 +123,17 @@ function RoomFormContent({ mode, room, role, onClose, onSubmit }) {
         <h3 className="text-base font-semibold">Basic info</h3>
         <div className="grid gap-4 md:grid-cols-2">
           <Input icon={<Hash className="h-4 w-4" />} label="Room number" name="roomNumber" onChange={(event) => setForm({ ...form, roomNumber: event.target.value })} value={form.roomNumber} />
-          <Select label="Type" name="type" onChange={(event) => setForm({ ...form, type: event.target.value })} value={form.type}>{roomTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Select>
+          <Select label="Type" name="type" onChange={(event) => {
+            const type = event.target.value;
+            const defaultRate = roomRateDefaults?.[type];
+            setForm((current) => ({
+              ...current,
+              type,
+              pricePerNight: mode === "add" && defaultRate !== null && defaultRate !== undefined
+                ? String(defaultRate)
+                : current.pricePerNight,
+            }));
+          }} value={form.type}>{roomTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</Select>
           <Input icon={<Banknote className="h-4 w-4" />} label="Price per night" name="pricePerNight" onChange={(event) => setForm({ ...form, pricePerNight: event.target.value })} type="number" value={form.pricePerNight} />
           <Input icon={<Layers3 className="h-4 w-4" />} label="Floor" name="floor" onChange={(event) => setForm({ ...form, floor: event.target.value })} type="number" value={form.floor} />
           <Input icon={<Users className="h-4 w-4" />} label="Capacity" name="capacity" onChange={(event) => setForm({ ...form, capacity: event.target.value })} type="number" value={form.capacity} />

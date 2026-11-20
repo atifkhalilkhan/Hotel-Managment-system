@@ -50,7 +50,23 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(async () => {
     try {
-      if (localStorage.getItem("luxurystay-token")) await api.post("/auth/logout");
+      if (localStorage.getItem("luxurystay-token")) {
+        if ("serviceWorker" in navigator) {
+          const registration = await navigator.serviceWorker.getRegistration();
+          const subscription = await registration?.pushManager?.getSubscription();
+          if (subscription) {
+            let serverError;
+            try {
+              await api.post("/notifications/unsubscribe", { endpoint: subscription.endpoint });
+            } catch (error) {
+              serverError = error;
+            }
+            await subscription.unsubscribe();
+            if (serverError) throw serverError;
+          }
+        }
+        await api.post("/auth/logout");
+      }
     } catch (error) {
       window.dispatchEvent(new CustomEvent("luxurystay:logout-error", { detail: error.message }));
     } finally {

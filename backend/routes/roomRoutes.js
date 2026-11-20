@@ -5,6 +5,7 @@ import upload from "../middleware/uploadMiddleware.js";
 import {
   createRoom,
   getRooms,
+  getPublicRooms,
   getAvailableRooms,
   getRoomById,
   updateRoom,
@@ -13,6 +14,9 @@ import {
 } from "../controllers/roomController.js";
 
 const roomRoutes = Router();
+
+// Public website room catalog; only guest-facing fields are returned.
+roomRoutes.get("/public", getPublicRooms);
 
 // Sab logged-in users (guest ko controller sirf available rooms dikhata hai)
 roomRoutes.get("/", protect, getRooms);

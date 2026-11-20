@@ -1,8 +1,9 @@
 import Invoice from "../models/Invoice.js";
 import Reservation from "../models/Reservation.js";
 import { buildInvoicePdf } from "../utils/generateInvoicePdf.js";
+import { notifyUsers } from "../utils/notifications.js";
+import HotelSettings from "../models/HotelSettings.js";
 
-const TAX_RATE = Number(process.env.TAX_RATE) || 0;
 const round = (n) => Math.round(n * 100) / 100;
 
 // Invoice dikhate waqt guest aur booking ki zaroori details bharo
@@ -38,18 +39,27 @@ export const createInvoice = async (req, res, next) => {
       return res.status(400).json({ message: "Invoice already exists for this reservation" });
     }
 
+    const settings = await HotelSettings.findOne({ key: "default" }).select("taxRate").lean();
+    const envTaxRate = Number(process.env.TAX_RATE);
+    const taxRate = settings?.taxRate ?? (Number.isFinite(envTaxRate) && envTaxRate >= 0 ? envTaxRate : 0);
     const invoice = new Invoice({
       invoiceNumber: await generateInvoiceNumber(),
       reservation: reservation._id,
       guest: reservation.guest,
       roomCharges: reservation.totalAmount,   // booking ka kiraya (copy)
-      taxRate: TAX_RATE,                      // tax ki copy (.env se)
+      taxRate,
     });
 
     invoice.recalculate();                    // subtotal, tax, total nikalo
     await invoice.save();
 
     await invoice.populate([POPULATE_GUEST, POPULATE_RESERVATION]);
+    await notifyUsers([reservation.guest], {
+      type: "invoice",
+      title: "New invoice",
+      message: `Invoice ${invoice.invoiceNumber} is ready to review.`,
+      link: "/my-invoices",
+    }, req.user._id);
     res.status(201).json(invoice);
   } catch (error) {
     next(error);
@@ -165,6 +175,12 @@ export const addCharge = async (req, res, next) => {
 
     invoice.recalculate();
     await invoice.save();
+    await notifyUsers([invoice.guest], {
+      type: "invoice",
+      title: "Invoice updated",
+      message: `A new charge was added to invoice ${invoice.invoiceNumber}.`,
+      link: `/invoices/${invoice._id}`,
+    }, req.user._id);
 
     res.status(201).json(invoice);
   } catch (error) {
@@ -192,6 +208,12 @@ export const removeCharge = async (req, res, next) => {
     invoice.charges.pull(req.params.chargeId);
     invoice.recalculate();
     await invoice.save();
+    await notifyUsers([invoice.guest], {
+      type: "invoice",
+      title: "Invoice updated",
+      message: `A charge was removed from invoice ${invoice.invoiceNumber}.`,
+      link: `/invoices/${invoice._id}`,
+    }, req.user._id);
 
     res.json(invoice);
   } catch (error) {
@@ -224,6 +246,12 @@ export const applyDiscount = async (req, res, next) => {
     invoice.discount = discount;
     invoice.recalculate();
     await invoice.save();
+    await notifyUsers([invoice.guest], {
+      type: "invoice",
+      title: "Invoice updated",
+      message: `Invoice ${invoice.invoiceNumber} has been updated.`,
+      link: `/invoices/${invoice._id}`,
+    }, req.user._id);
 
     res.json(invoice);
   } catch (error) {
@@ -256,6 +284,12 @@ export const markPaid = async (req, res, next) => {
     invoice.receivedBy = req.user._id;
     await invoice.save();
 
+    await notifyUsers([invoice.guest], {
+      type: "payment",
+      title: "Payment received",
+      message: `Invoice ${invoice.invoiceNumber} has been marked paid.`,
+      link: `/invoices/${invoice._id}`,
+    }, req.user._id);
     res.json({ message: "Invoice marked as paid", invoice });
   } catch (error) {
     next(error);
@@ -277,6 +311,12 @@ export const voidInvoice = async (req, res, next) => {
     invoice.status = "void";
     await invoice.save();
 
+    await notifyUsers([invoice.guest], {
+      type: "invoice",
+      title: "Invoice voided",
+      message: `Invoice ${invoice.invoiceNumber} was voided.`,
+      link: "/my-invoices",
+    }, req.user._id);
     res.json({ message: "Invoice voided", status: invoice.status });
   } catch (error) {
     next(error);

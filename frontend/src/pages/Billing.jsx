@@ -168,18 +168,23 @@ export default function Billing() {
               <p className="mt-1 text-sm text-muted">Paid invoice revenue by day</p>
             </div>
             {daily.length ? (
-              <div className="no-scrollbar overflow-x-auto">
-                <div className="flex h-64 min-w-[620px] items-end gap-3 border-b border-line px-2 pt-5">
+              <div className="min-w-0 overflow-hidden">
+                <div className="grid h-64 min-w-0 items-end gap-1 border-b border-line px-1 pt-5" style={{ gridTemplateColumns: `repeat(${daily.length}, minmax(0, 1fr))` }}>
                   {daily.map((entry, index) => {
                     const height = Math.max(4, (Number(entry.amount || 0) / maxDaily) * 190);
                     return (
-                      <div className="group relative flex h-full min-w-[44px] flex-1 flex-col items-center justify-end" key={entry.date}>
-                        <div className="pointer-events-none absolute bottom-full z-10 mb-2 hidden whitespace-nowrap rounded-md bg-ink px-2 py-1 text-xs text-white group-hover:block group-focus-within:block">
+                      <div className="group relative flex h-full min-w-0 flex-col items-center justify-end" key={entry.date}>
+                        <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-ink px-2 py-1 text-xs text-white group-hover:block group-focus-within:block">
                           {formatDateValue(entry.date)} · {formatMoney(entry.amount)} ({entry.count})
                         </div>
                         <div aria-label={`${formatDateValue(entry.date)}: ${formatMoney(entry.amount)}`} className="w-full max-w-12 rounded-t-md bg-primary transition-opacity hover:opacity-80" style={{ height }} tabIndex={0} title={`${formatDateValue(entry.date)}: ${formatMoney(entry.amount)} · ${entry.count} payments`} />
-                        <span className="mt-2 h-5 text-center text-[10px] text-muted">
-                          {index % labelStep === 0 || index === daily.length - 1 ? new Date(`${entry.date}T00:00:00Z`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" }) : ""}
+                        <span className="mt-2 h-5 min-w-0 text-center text-[10px] text-muted">
+                          {(index % labelStep === 0 || index === daily.length - 1) && (
+                            <>
+                              <span className="hidden sm:inline">{new Date(`${entry.date}T00:00:00Z`).toLocaleDateString("en-GB", { day: "2-digit", month: "short", timeZone: "UTC" })}</span>
+                              <span className="sm:hidden">{new Date(`${entry.date}T00:00:00Z`).getUTCDate()}</span>
+                            </>
+                          )}
                         </span>
                       </div>
                     );

@@ -62,6 +62,7 @@ const reservationSchema = new mongoose.Schema(
       ref: "User",
     },
     checkedInAt: { type: Date },
+    keyCardNumber: { type: String, trim: true },
     checkedOutAt: { type: Date },
     cancelledAt: { type: Date },
   },

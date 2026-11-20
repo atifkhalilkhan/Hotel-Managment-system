@@ -1,9 +1,9 @@
 import cloudinary from "../config/cloudinary.js";
 
-export const uploadToCloudinary = (buffer, folder = "luxurystay/rooms") => {
+export const uploadToCloudinary = (buffer, folder = "luxurystay/rooms", options = {}) => {
   return new Promise((resolve, reject) => {
     const stream = cloudinary.uploader.upload_stream(
-      { folder, resource_type: "image" },
+      { folder, resource_type: "image", ...options },
       (error, result) => {
         if (error) return reject(error);
         resolve({ url: result.secure_url, publicId: result.public_id });

@@ -3,14 +3,15 @@ const baseURL = import.meta.env.VITE_API_URL || "http://localhost:2008/api";
 
 async function request(path, { method = "GET", data, headers = {} } = {}) {
   const token = localStorage.getItem("luxurystay-token");
+  const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
   const response = await fetch(`${baseURL}${path}`, {
     method,
     headers: {
-      ...(data ? { "Content-Type": "application/json" } : {}),
+      ...(data && !isFormData ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
-    ...(data ? { body: JSON.stringify(data) } : {}),
+    ...(data ? { body: isFormData ? data : JSON.stringify(data) } : {}),
   });
 
   const payload = response.status === 204 ? null : await response.json().catch(() => null);

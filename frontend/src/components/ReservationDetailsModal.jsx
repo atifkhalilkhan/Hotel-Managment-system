@@ -1,7 +1,8 @@
 /* Details modal for reservation records and actions. */
+import { useState } from "react";
 import { CalendarCheck, CalendarDays, FileText, LogIn, LogOut, UserRound, XCircle } from "lucide-react";
 import Link from "./Link.jsx";
-import { Alert, Button, Modal, Badge } from "./UI.jsx";
+import { Alert, Button, Input, Modal, Badge } from "./UI.jsx";
 import { formatDate, formatPrice, nightsLabel, reservationStatusLabel } from "../lib/reservationUtils.js";
 
 const statusMeta = {
@@ -12,10 +13,14 @@ const statusMeta = {
 };
 
 export default function ReservationDetailsModal({ open, onClose, reservation, userRole, onCheckIn, onCheckOut, onCancel, onPrint, invoice, invoiceLoading, invoiceError, onGenerateInvoice, generatingInvoice }) {
+  const [keyCardNumber, setKeyCardNumber] = useState("");
+
   if (!open || !reservation) return null;
 
   const room = reservation.room || {};
   const guest = reservation.guest || {};
+  const preferences = guest.preferences || {};
+  const hasPreferences = Boolean(preferences.roomType || preferences.bedType || preferences.smoking || preferences.dietary || preferences.notes);
   const status = statusMeta[reservation.status] || { tone: "neutral", label: reservationStatusLabel(reservation.status) };
   const canCheckIn = ["admin", "manager", "receptionist"].includes(userRole) && reservation.status === "confirmed";
   const canCheckOut = ["admin", "manager", "receptionist"].includes(userRole) && reservation.status === "checked-in";
@@ -50,11 +55,12 @@ export default function ReservationDetailsModal({ open, onClose, reservation, us
           <div className="space-y-2 rounded-lg border border-line p-4">
             <p className="text-xs uppercase tracking-wide text-muted">Guest</p>
             <div className="flex items-center gap-2">
-              <UserRound className="h-4 w-4 text-muted" />
+              {guest.avatar?.url ? <img alt="" className="h-8 w-8 rounded-full object-cover" src={guest.avatar.url} /> : <UserRound className="h-4 w-4 text-muted" />}
               <span className="font-medium">{guest.name || "Guest"}</span>
             </div>
             <p className="text-sm text-muted">{guest.email || "No email"}</p>
             <p className="text-sm text-muted">{guest.phone || "No phone"}</p>
+            {(guest.address || guest.city || guest.country) && <p className="text-sm text-muted">{[guest.address, guest.city, guest.country].filter(Boolean).join(", ")}</p>}
           </div>
           <div className="space-y-2 rounded-lg border border-line p-4">
             <p className="text-xs uppercase tracking-wide text-muted">Room</p>
@@ -63,6 +69,26 @@ export default function ReservationDetailsModal({ open, onClose, reservation, us
             <p className="text-sm text-muted">{formatPrice(room.pricePerNight)} / night</p>
           </div>
         </div>
+
+        {hasPreferences && (
+          <div className="rounded-lg border border-line p-4">
+            <p className="text-xs uppercase tracking-wide text-muted">Guest preferences</p>
+            <div className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
+              {preferences.roomType && <p><span className="text-muted">Room:</span> <span className="capitalize">{preferences.roomType}</span></p>}
+              {preferences.bedType && <p><span className="text-muted">Bed:</span> <span className="capitalize">{preferences.bedType}</span></p>}
+              {(preferences.smoking || preferences.roomType || preferences.bedType) && <p>{preferences.smoking ? "Smoking room requested" : "Non-smoking preference"}</p>}
+              {preferences.dietary && <p><span className="text-muted">Dietary:</span> {preferences.dietary}</p>}
+              {preferences.notes && <p className="sm:col-span-2"><span className="text-muted">Notes:</span> {preferences.notes}</p>}
+            </div>
+          </div>
+        )}
+
+        {reservation.keyCardNumber && (
+          <div className="rounded-lg border border-primary/20 bg-primary-soft p-4">
+            <p className="text-xs uppercase tracking-wide text-primary-dark">Key card number</p>
+            <p className="mt-1 font-semibold text-primary-dark">{reservation.keyCardNumber}</p>
+          </div>
+        )}
 
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-lg border border-line p-4">
@@ -135,7 +161,7 @@ export default function ReservationDetailsModal({ open, onClose, reservation, us
 
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           {onPrint && <Button onClick={onPrint} type="button" variant="outline">Print</Button>}
-          {canCheckIn && <Button onClick={onCheckIn} type="button">Check-in</Button>}
+          {canCheckIn && <div className="flex flex-col gap-3 sm:flex-row sm:items-end"><Input label="Key card number (optional)" onChange={(event) => setKeyCardNumber(event.target.value)} placeholder="Auto-generated if blank" value={keyCardNumber} /><Button onClick={() => onCheckIn(keyCardNumber.trim())} type="button">Check-in</Button></div>}
           {canCheckOut && <Button onClick={onCheckOut} type="button">Check-out</Button>}
           {canCancel && <Button onClick={onCancel} type="button" variant="danger">Cancel</Button>}
         </div>

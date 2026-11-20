@@ -29,6 +29,18 @@ export default function ReservationForm() {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [reservation, setReservation] = useState(null);
+  const [hotelSettings, setHotelSettings] = useState(null);
+  const [settingsError, setSettingsError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    api.get("/settings")
+      .then((settings) => { if (active) setHotelSettings(settings); })
+      .catch((requestError) => {
+        if (active) setSettingsError(requestError.message || "Hotel policies could not be loaded.");
+      });
+    return () => { active = false; };
+  }, []);
 
   const nights = useMemo(() => {
     if (!checkIn || !checkOut) return 0;
@@ -295,6 +307,28 @@ export default function ReservationForm() {
               </div>
 
               <Textarea id="special-requests" label="Special requests" onChange={(event) => setSpecialRequests(event.target.value)} placeholder="Any preferences or notes?" value={specialRequests} />
+              {settingsError && <Alert type="info">{settingsError}</Alert>}
+              {hotelSettings?.policies && (
+                <section aria-label="Hotel policies" className="space-y-3 rounded-lg border border-line bg-page p-4">
+                  <div>
+                    <h3 className="font-semibold">Hotel policies</h3>
+                    <p className="mt-1 text-xs text-muted">Please review these before confirming your stay.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+                    <p><span className="text-muted">Check-in:</span> <span className="font-medium">{hotelSettings.policies.checkInTime}</span></p>
+                    <p><span className="text-muted">Check-out:</span> <span className="font-medium">{hotelSettings.policies.checkOutTime}</span></p>
+                  </div>
+                  <div className="space-y-2 text-sm">
+                    {[
+                      ["Cancellation", hotelSettings.policies.cancellation],
+                      ["Smoking", hotelSettings.policies.smoking],
+                      ["Children", hotelSettings.policies.children],
+                    ].map(([label, value]) => (
+                      <p className="break-words" key={label}><span className="font-medium">{label}:</span> <span className="text-muted">{value}</span></p>
+                    ))}
+                  </div>
+                </section>
+              )}
             </Card>
           )}
 

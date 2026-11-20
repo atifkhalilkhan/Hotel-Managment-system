@@ -1,13 +1,15 @@
 import Reservation from "../models/Reservation.js";
 import Room from "../models/Room.js";
 import User from "../models/User.js";
+import HousekeepingTask from "../models/HousekeepingTask.js";
+import { notifyRoles, notifyUsers } from "../utils/notifications.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;                    // ek din = itne milliseconds
 const ACTIVE_STATUSES = ["confirmed", "checked-in"];   // "zinda" bookings (jo room rokti hain)
 const STATUSES = ["confirmed", "checked-in", "checked-out", "cancelled"];
 
 // populate mein sirf kaam ki fields mangwate hain (password jaisi cheezein kabhi nahi)
-const POPULATE_GUEST = { path: "guest", select: "name email phone" };
+const POPULATE_GUEST = { path: "guest", select: "name email phone avatar address city country preferences" };
 const POPULATE_ROOM = { path: "room", select: "roomNumber type floor pricePerNight images" };
 
 
@@ -119,6 +121,22 @@ export const createReservation = async (req, res, next) => {
     // ID ki jagah guest aur room ki details bhar do
     await reservation.populate([POPULATE_GUEST, POPULATE_ROOM]);
 
+    if (req.user.role === "guest") {
+      await notifyRoles(["admin", "manager", "receptionist"], {
+        type: "booking",
+        title: "New reservation",
+        message: `${reservation.guest.name} booked Room ${reservation.room.roomNumber} (${reservation.bookingCode}).`,
+        link: "/reservations",
+      }, req.user._id);
+    } else {
+      await notifyUsers([guestId], {
+        type: "booking",
+        title: "Reservation created",
+        message: `Your reservation ${reservation.bookingCode} has been created.`,
+        link: "/my-bookings",
+      }, req.user._id);
+    }
+
     res.status(201).json(reservation);
   } catch (error) {
     next(error);
@@ -227,6 +245,22 @@ export const cancelReservation = async (req, res, next) => {
     reservation.cancelledAt = new Date();
     await reservation.save();
 
+    if (req.user.role === "guest") {
+      await notifyRoles(["admin", "manager", "receptionist"], {
+        type: "booking",
+        title: "Reservation cancelled",
+        message: `${reservation.bookingCode} was cancelled by the guest.`,
+        link: "/reservations",
+      }, req.user._id);
+    } else {
+      await notifyUsers([reservation.guest], {
+        type: "booking",
+        title: "Reservation cancelled",
+        message: `Your reservation ${reservation.bookingCode} was cancelled.`,
+        link: "/my-bookings",
+      }, req.user._id);
+    }
+
     res.json({ message: "Reservation cancelled", status: reservation.status });
   } catch (error) {
     next(error);
@@ -254,14 +288,25 @@ export const checkIn = async (req, res, next) => {
       return res.status(400).json({ message: `Room is ${room.status}, cannot check in now` });
     }
 
+    const keyCardNumber =
+      (req.body?.keyCardNumber || "").trim() ||
+      `KC-${room.roomNumber}-${Math.floor(1000 + Math.random() * 9000)}`;
+
     reservation.status = "checked-in";
     reservation.checkedInAt = new Date();
+    reservation.keyCardNumber = keyCardNumber;
     room.status = "occupied";
 
     await reservation.save();
     await room.save();
 
     await reservation.populate([POPULATE_GUEST, POPULATE_ROOM]);
+    await notifyUsers([reservation.guest._id], {
+      type: "booking",
+      title: "Check-in complete",
+      message: `You are checked in to Room ${room.roomNumber}. Key card: ${keyCardNumber}.`,
+      link: "/my-bookings",
+    }, req.user._id);
     res.json({ message: "Checked in", reservation });
   } catch (error) {
     next(error);
@@ -286,13 +331,34 @@ export const checkOut = async (req, res, next) => {
     reservation.checkedOutAt = new Date();
     await reservation.save();
 
-    // Room safai ke liye (housekeeping baad mein "available" karegi)
+    // Room safai ke liye, aur housekeeping ka task khud ban jaye
     if (room) {
       room.status = "cleaning";
       await room.save();
+
+      await HousekeepingTask.create({
+        room: room._id,
+        type: "checkout-cleaning",
+        priority: "high",
+        reservation: reservation._id,
+        createdBy: req.user._id,
+        notes: `Check-out of ${reservation.bookingCode}`,
+      });
+      await notifyRoles(["housekeeping"], {
+        type: "housekeeping",
+        title: "Checkout cleaning task",
+        message: `Room ${room.roomNumber} needs checkout cleaning.`,
+        link: "/housekeeping",
+      }, req.user._id);
     }
 
     await reservation.populate([POPULATE_GUEST, POPULATE_ROOM]);
+    await notifyUsers([reservation.guest._id], {
+      type: "booking",
+      title: "Check-out complete",
+      message: `Your stay ${reservation.bookingCode} has been checked out.`,
+      link: "/my-bookings",
+    }, req.user._id);
     res.json({ message: "Checked out", reservation });
   } catch (error) {
     next(error);

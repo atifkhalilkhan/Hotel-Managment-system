@@ -1,5 +1,6 @@
 import stripe from "../config/stripe.js";
 import Invoice from "../models/Invoice.js";
+import { notifyUsers } from "../utils/notifications.js";
 
 const CURRENCY = (process.env.STRIPE_CURRENCY || "usd").toLowerCase();
 const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
@@ -25,6 +26,12 @@ const applyPaidSession = async (session) => {
   invoice.paidAt = new Date();
   invoice.stripeSessionId = session.id;
   await invoice.save();
+  await notifyUsers([invoice.guest], {
+    type: "payment",
+    title: "Payment received",
+    message: `Payment for invoice ${invoice.invoiceNumber} has been confirmed.`,
+    link: `/invoices/${invoice._id}`,
+  });
 };
 
 
