@@ -26,7 +26,7 @@ import MyServices from "./pages/MyServices.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import NotAuthorized from "./pages/NotAuthorized.jsx";
 import { Alert, Loader } from "./components/UI.jsx";
-import { navigate } from "./router.js";
+import { navigate, rememberReturnTo, takeReturnTo } from "./router.js";
 
 const Feedback = lazy(() => import("./pages/Feedback.jsx"));
 const Notifications = lazy(() => import("./pages/Notifications.jsx"));
@@ -87,9 +87,12 @@ export default function App() {
     if (path === "/") {
       navigate(user ? "/dashboard" : "/login", true);
     } else if (user && ["/login", "/register"].includes(path)) {
-      navigate("/dashboard", true);
+      navigate(takeReturnTo("/dashboard"), true);
     } else if (!user && !["/login", "/register", "/unauthorized"].includes(path)) {
-      navigate("/login", true);
+      rememberReturnTo();
+      // Website ka "Book this room" naye guest ko account banane bhejta hai (register ke baad
+      // wahi booking form khulta hai); baqi portal pages login par.
+      navigate(path === "/reservations/new" ? "/register" : "/login", true);
     }
   }, [path, user, loading]);
 

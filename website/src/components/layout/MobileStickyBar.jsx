@@ -3,7 +3,6 @@ import ButtonLink from "../ui/ButtonLink";
 import useScrolled from "../../hooks/useScrolled";
 import useElementInView from "../../hooks/useElementInView";
 import { hotelInfo } from "../../lib/hotelInfo";
-import { guestRegisterUrl } from "../../lib/portal";
 
 // Sirf mobile par: thoda scroll karne ke baad neeche Call aur Book now ka bar
 export default function MobileStickyBar({ suppressed = false }) {
@@ -25,7 +24,7 @@ export default function MobileStickyBar({ suppressed = false }) {
         <Phone className="size-4" aria-hidden="true" />
         Call
       </ButtonLink>
-      <ButtonLink to={guestRegisterUrl()} size="lg">
+      <ButtonLink to="/rooms" size="lg">
         <CalendarCheck className="size-4" aria-hidden="true" />
         Book now
       </ButtonLink>

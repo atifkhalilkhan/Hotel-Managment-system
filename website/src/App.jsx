@@ -6,7 +6,7 @@ import Contact from "./pages/Contact";
 import Reviews from "./pages/Reviews";
 import About from "./pages/About";
 import Services from "./pages/Services";
-import Rooms from "./pages/Rooms";
+import Rooms, { AvailabilityRedirect, RoomsTypeRedirect } from "./pages/Rooms";
 import Gallery from "./pages/Gallery";
 import Home from "./pages/Home";
 import Policies from "./pages/Policies";
@@ -18,8 +18,9 @@ export default function App() {
       <Routes>
         <Route element={<SiteLayout />}>
           <Route index element={<Home />} />
+          <Route path="availability" element={<AvailabilityRedirect />} />
           <Route path="rooms" element={<Rooms />} />
-          <Route path="rooms/:type" element={<Rooms />} />
+          <Route path="rooms/:type" element={<RoomsTypeRedirect />} />
           <Route path="services" element={<Services />} />
           <Route path="about" element={<About />} />
           <Route path="gallery" element={<Gallery />} />

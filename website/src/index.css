@@ -10,6 +10,8 @@
   --color-soft: #F7F7F5;
   --color-line: #E5E5E5;
   --color-muted: #6B7280;
+  --color-sand: #F3F1EC;
+  --color-night: #29231F;
 }
 
 @layer base {
@@ -115,27 +117,11 @@
   to { opacity: 1; transform: translateY(0); }
 }
 .home-hero-copy { animation: home-rise 750ms cubic-bezier(.2,.75,.25,1) both; }
-.home-hero-note { animation: home-rise 750ms 140ms cubic-bezier(.2,.75,.25,1) both; }
 .home-hero-slide { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.025); transition: opacity 850ms ease, transform 7s ease; }
 .home-hero-slide.is-active { opacity: 1; transform: scale(1); }
-.home-hero-bottom {
-  position: absolute;
-  right: max(1.25rem, calc((100vw - 1200px) / 2));
-  bottom: 1.1rem;
-  left: max(1.25rem, calc((100vw - 1200px) / 2));
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  border-top: 1px solid rgb(255 255 255 / 30%);
-  padding-top: .7rem;
-  color: rgb(255 255 255 / 65%);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: .15em;
-}
 .home-hero-pagination { display: flex; align-items: center; gap: .55rem; margin-left: auto; }
 .home-hero-pagination button { width: 1.45rem; height: .35rem; padding: 0; border: 0; border-radius: 999px; background: rgb(255 255 255 / 45%); cursor: pointer; transition: width 180ms ease, background-color 180ms ease; }
-.home-hero-pagination button.is-active { width: 2.2rem; background: #f97316; }
+.home-hero-pagination button.is-active { width: 2.2rem; background: var(--color-primary); }
 .home-hero-pagination button:focus-visible { outline: 2px solid white; outline-offset: 3px; }
 .home-reveal { opacity: 0; transform: translateY(18px); }
 .home-reveal.is-visible { animation: home-rise 600ms var(--home-delay, 0ms) cubic-bezier(.2,.75,.25,1) both; }
@@ -148,19 +134,34 @@
 .amenity-arc-card { display: block; width: 100%; height: 100%; overflow: hidden; border-radius: 6px; box-shadow: 0 5px 14px rgb(24 19 13 / 11%); transform: perspective(900px) rotateY(var(--arc-turn, 0deg)); transform-origin: center; transition: transform 450ms ease, box-shadow 450ms ease; }
 .amenity-arc-card img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .amenity-arc-card:hover { z-index: 1; transform: perspective(900px) rotateY(0deg) translateY(-4px) scale(1.015); box-shadow: 0 9px 18px rgb(24 19 13 / 16%); }
-.amenity-arc-card:focus-visible { outline: 3px solid #f97316; outline-offset: 3px; }
+.amenity-arc-card:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 3px; }
 .amenity-arc-notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid rgb(17 17 17 / 12%); }
-.amenity-arc-notes > div + div { border-left: 1px solid rgb(17 17 17 / 12%); }
+.amenity-arc-notes > * + * { border-left: 1px solid rgb(17 17 17 / 12%); }
 @media (max-width: 639px) {
   .amenity-arc-viewport { height: 300px; }
   .amenity-arc-slot { width: clamp(190px, 58vw, 235px); flex-basis: clamp(190px, 58vw, 235px); }
   .amenity-arc-notes article { padding-inline: .55rem; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .home-hero-copy, .home-hero-note { animation: none; }
+  .home-hero-copy { animation: none; }
   .home-hero-slide, .home-hero-pagination button { transition: none; }
   .amenity-arc-card { transition: none; }
   .amenity-arc-viewport { scroll-behavior: auto; }
   .home-reveal, .home-reveal.is-visible { opacity: 1; transform: none; animation: none; }
 }
 
+
+/* Guest app: phone screen badalna aur feature ki progress line */
+@keyframes app-screen-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes app-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+.app-screen-in { animation: app-screen-in 380ms cubic-bezier(.2,.75,.25,1) both; }
+.app-progress { animation: app-progress var(--app-cycle, 6000ms) linear both; }
+@media (prefers-reduced-motion: reduce) {
+  .app-screen-in, .app-progress { animation: none; }
+}

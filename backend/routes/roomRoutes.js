@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { rateLimit } from "express-rate-limit";
 import { protect } from "../middleware/authMiddleware.js";
 import { authorize } from "../middleware/roleMiddleware.js";
 import upload from "../middleware/uploadMiddleware.js";
@@ -6,6 +7,7 @@ import {
   createRoom,
   getRooms,
   getPublicRooms,
+  getPublicAvailableRooms,
   getAvailableRooms,
   getRoomById,
   updateRoom,
@@ -17,6 +19,17 @@ const roomRoutes = Router();
 
 // Public website room catalog; only guest-facing fields are returned.
 roomRoutes.get("/public", getPublicRooms);
+
+// Website ka "Check availability": bina login, dates ke hisaab se khali rooms.
+// Har search database query hai, is liye ek IP se hadd rakhi hai.
+const publicAvailabilityLimit = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: "Too many searches. Please wait a minute and try again." },
+});
+roomRoutes.get("/public/available", publicAvailabilityLimit, getPublicAvailableRooms);
 
 // Sab logged-in users (guest ko controller sirf available rooms dikhata hai)
 roomRoutes.get("/", protect, getRooms);

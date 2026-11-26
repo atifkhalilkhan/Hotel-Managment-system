@@ -2,6 +2,7 @@ import ServiceRequest from "../models/ServiceRequest.js";
 import Reservation from "../models/Reservation.js";
 import Invoice from "../models/Invoice.js";
 import { notifyRoles, notifyUsers } from "../utils/notifications.js";
+import { BILLABLE_STATUSES, ensureReservationInvoice } from "../utils/invoices.js";
 
 const TYPES = ["room-service", "wake-up-call", "transportation", "other"];
 
@@ -191,7 +192,14 @@ export const updateRequestStatus = async (req, res, next) => {
       if (amount > 0) {
         invoice = await Invoice.findOne({ reservation: request.reservation });
         if (!invoice) {
-          return res.status(400).json({ message: "Create the invoice first to add this charge (or complete without an amount)" });
+          // Guest hotel mein hai to bill khud khol do (purani bookings jin ka invoice nahi bana tha)
+          const reservation = await Reservation.findById(request.reservation);
+          if (reservation && BILLABLE_STATUSES.includes(reservation.status)) {
+            ({ invoice } = await ensureReservationInvoice(reservation, req.user._id));
+          }
+        }
+        if (!invoice) {
+          return res.status(400).json({ message: "This guest has not checked in yet, so the charge cannot be billed (complete without an amount)" });
         }
         if (invoice.status !== "unpaid") {
           return res.status(400).json({ message: `The invoice is already ${invoice.status}, the charge cannot be added` });

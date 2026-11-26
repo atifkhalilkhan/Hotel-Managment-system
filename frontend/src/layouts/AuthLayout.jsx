@@ -1,4 +1,7 @@
-import { Building2, CalendarCheck2, ShieldCheck, Sparkles, Star } from "lucide-react";
+import { ArrowLeft, Building2, CalendarCheck2, ShieldCheck, Sparkles, Star } from "lucide-react";
+
+// Public website (hotel ka home page). Production mein .env mein VITE_WEBSITE_URL set karein.
+const WEBSITE_URL = (import.meta.env.VITE_WEBSITE_URL || "http://localhost:5175").replace(/\/+$/, "") + "/";
 
 export default function AuthLayout({ title, subtitle, children, compact = false }) {
   return (
@@ -7,9 +10,19 @@ export default function AuthLayout({ title, subtitle, children, compact = false 
         <aside className="auth-panel relative isolate flex min-h-[190px] min-w-0 flex-col justify-between overflow-hidden bg-[#17191e] px-6 py-5 text-white sm:min-h-0 sm:justify-between sm:px-9 sm:py-7 lg:px-12 lg:py-10">
           <div aria-hidden="true" className="pointer-events-none absolute -right-28 -top-36 -z-10 h-[28rem] w-[28rem] rounded-full border border-white/10 shadow-[0_0_0_50px_rgba(255,255,255,0.025),0_0_0_100px_rgba(255,255,255,0.02)]" />
           <div aria-hidden="true" className="pointer-events-none absolute -bottom-36 -left-24 -z-10 h-80 w-80 rounded-full bg-orange-500/20 blur-[90px]" />
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-lg shadow-orange-950/30"><Building2 aria-hidden="true" className="h-5 w-5" /></div>
-            <div><p className="text-sm font-semibold tracking-wide">LuxuryStay</p><p className="mt-0.5 text-[11px] tracking-[0.16em] text-white/45">GUEST PORTAL</p></div>
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-orange-500 text-white shadow-lg shadow-orange-950/30"><Building2 aria-hidden="true" className="h-5 w-5" /></div>
+              <div><p className="text-sm font-semibold tracking-wide">LuxuryStay</p><p className="mt-0.5 text-[11px] tracking-[0.16em] text-white/45">GUEST PORTAL</p></div>
+            </div>
+            <a
+              href={WEBSITE_URL}
+              className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-white/15 px-3.5 text-xs font-medium text-white/80 transition-colors hover:border-white/40 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-300"
+            >
+              <ArrowLeft aria-hidden="true" className="h-3.5 w-3.5" />
+              <span className="max-[380px]:hidden">Back to home</span>
+              <span className="hidden max-[380px]:inline">Home</span>
+            </a>
           </div>
           <div className="sm:hidden">
             <p className="text-[17px] font-semibold tracking-[-0.02em] text-white">Your stay, made simple.</p>

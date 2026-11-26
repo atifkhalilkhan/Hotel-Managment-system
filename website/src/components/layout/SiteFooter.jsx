@@ -5,7 +5,6 @@ import Logo from "../ui/Logo";
 import SocialLinks from "../ui/SocialLinks";
 import { footerGroups } from "../../lib/navigation";
 import { hotelInfo } from "../../lib/hotelInfo";
-import { guestRegisterUrl } from "../../lib/portal";
 
 function FooterLink({ to, children }) {
   const external = /^(https?:|tel:|mailto:)/.test(to);
@@ -43,8 +42,8 @@ export default function SiteFooter() {
         </div>
 
         <div className="border-t border-white/15 pt-5 lg:col-span-2 lg:flex lg:items-center lg:justify-between lg:gap-8">
-          <div><p className="font-serif text-xl sm:text-2xl">A good stay starts with a warm welcome.</p><p className="mt-2 text-sm text-white/55">We’re here whenever you’re ready.</p></div>
-          <a href={guestRegisterUrl()} className="mt-4 inline-flex min-h-10 items-center justify-center gap-3 bg-primary px-5 text-sm font-semibold text-ink transition-colors hover:bg-primary/85 focus-visible:outline-white lg:mt-0">Book your stay <ArrowRight className="size-4" aria-hidden="true" /></a>
+          <div><p className="font-semibold tracking-tight text-xl sm:text-2xl">A good stay starts with a warm welcome.</p><p className="mt-2 text-sm text-white/55">We’re here whenever you’re ready.</p></div>
+          <Link to="/rooms" className="mt-4 inline-flex min-h-10 items-center justify-center gap-3 bg-primary px-5 text-sm font-semibold text-ink transition-colors hover:bg-primary/85 focus-visible:outline-white lg:mt-0">Book your stay <ArrowRight className="size-4" aria-hidden="true" /></Link>
         </div>
       </Container>
       <div className="border-t border-white/10">

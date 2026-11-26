@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Expand, X } from "lucide-react";
 import Container from "../components/ui/Container";
+import useLockBodyScroll from "../hooks/useLockBodyScroll";
 
 const categories = ["All photos", "Bedrooms", "Suites", "Dining", "Amenities", "Family"];
 const imageGroups = [
@@ -11,13 +12,18 @@ const imageGroups = [
   { folder: "aminites", category: "Amenities", count: 6, titles: ["Make time for movement", "A little play time", "A refreshing dip", "Poolside pause", "Room for little adventures", "A little friendly fun"] },
   { folder: "family", category: "Family", count: 6, titles: ["The journey starts together", "A family room to remember", "A little time together", "Dinner with everyone", "Make room for play", "All together, right here"] },
 ];
-const photos = imageGroups.flatMap(({ folder, category, count, titles }) => Array.from({ length: count }, (_, index) => ({
-  id: `${folder}-${index + 1}`,
-  category,
-  title: titles[index],
-  alt: `${titles[index]} — ${category.toLowerCase()} at ${category === "Family" ? "the hotel" : "LuxuryStay"}`,
-  src: `/gallery-optimized/${folder}-${index + 1}.jpg`,
-})));
+// In tasveeron par doosri companiyon ke watermark / naam / cartoon hain: saaf tasveer milne tak chhupi
+const HIDDEN_PHOTOS = new Set(["dinning-3", "bedrooms-3", "suite-1", "suite-5"]);
+const photos = imageGroups
+  .flatMap(({ folder, category, count, titles }) => Array.from({ length: count }, (_, index) => ({
+    id: `${folder}-${index + 1}`,
+    category,
+    title: titles[index],
+    alt: `${titles[index]} — ${category.toLowerCase()} at ${category === "Family" ? "the hotel" : "LuxuryStay"}`,
+    src: `/gallery-optimized/${folder}-${index + 1}.jpg`, // grid: chhoti, jaldi load
+    full: `/${folder}/${index + 1}.jpg`, // lightbox: asli bari file
+  })))
+  .filter((photo) => !HIDDEN_PHOTOS.has(photo.id));
 
 export default function Gallery() {
   const [category, setCategory] = useState("All photos");
@@ -27,20 +33,32 @@ export default function Gallery() {
   const visiblePhotos = category === "All photos" ? photos : photos.filter((photo) => photo.category === category);
   const activePhoto = visiblePhotos[activeIndex];
 
+  const lightboxOpen = activeIndex >= 0;
+  useLockBodyScroll(lightboxOpen);
+
+  // Khulne par focus close button par, band hone par wapas usi tasveer par jis se khula tha
+  const closeButtonRef = useRef(null);
+  const openerRef = useRef(null);
+  useEffect(() => {
+    if (!lightboxOpen) return undefined;
+    closeButtonRef.current?.focus();
+    const opener = openerRef.current;
+    return () => opener?.focus?.();
+  }, [lightboxOpen]);
+  const openLightbox = (index, event) => {
+    openerRef.current = event.currentTarget;
+    setActiveIndex(index);
+  };
+
   useEffect(() => {
     if (activeIndex < 0) return undefined;
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
     const onKeyDown = (event) => {
       if (event.key === "Escape") setActiveIndex(-1);
       if (event.key === "ArrowRight") setActiveIndex((current) => (current + 1) % visiblePhotos.length);
       if (event.key === "ArrowLeft") setActiveIndex((current) => (current - 1 + visiblePhotos.length) % visiblePhotos.length);
     };
     document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      document.removeEventListener("keydown", onKeyDown);
-    };
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [activeIndex, visiblePhotos.length]);
 
   const changeCategory = (next) => {
@@ -68,7 +86,7 @@ export default function Gallery() {
           </div>
           <div className="mt-6 flex items-center justify-between text-xs text-muted"><span>{visiblePhotos.length} photographs</span><span className="hidden sm:block">Select any image to view it larger</span></div>
           {visiblePhotos.length ? <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
-            {visiblePhotos.map((photo, index) => <button key={photo.id} type="button" onClick={() => setActiveIndex(index)} className="gallery-tile group relative aspect-[4/3] overflow-hidden bg-soft text-left" style={{ animationDelay: `${Math.min(index, 8) * 55}ms` }} aria-label={`Open photo: ${photo.title}`}>
+            {visiblePhotos.map((photo, index) => <button key={photo.id} type="button" onClick={(event) => openLightbox(index, event)} className="gallery-tile group relative aspect-[4/3] overflow-hidden bg-soft text-left" style={{ animationDelay: `${Math.min(index, 8) * 55}ms` }} aria-label={`Open photo: ${photo.title}`}>
               <img src={photo.src} alt={photo.alt} decoding="async" fetchPriority={index === 0 ? "high" : "auto"} loading={index < 3 ? "eager" : "lazy"} onLoad={() => setLoaded((current) => ({ ...current, [photo.id]: true }))} className={`size-full object-cover transition duration-700 group-hover:scale-[1.045] ${loaded[photo.id] ? "opacity-100" : "opacity-0"}`} />
               {!loaded[photo.id] && <span className="absolute inset-0 animate-pulse bg-soft" aria-hidden="true" />}
               <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 bg-ink/75 p-3 text-white transition duration-300 sm:p-4 lg:translate-y-2 lg:opacity-0 lg:group-hover:translate-y-0 lg:group-hover:opacity-100"><span><span className="block text-[9px] font-semibold uppercase tracking-[0.15em] text-white/70">{photo.category}</span><span className="mt-1 block text-sm font-medium sm:text-base">{photo.title}</span></span><Expand className="mb-0.5 size-4 shrink-0" aria-hidden="true" /></span>
@@ -77,12 +95,12 @@ export default function Gallery() {
         </Container>
       </section>
 
-      <section className="bg-soft py-10 sm:py-12"><Container className="flex flex-col gap-5 border border-line bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div><p className="type-eyebrow text-accent">Ready to picture your stay?</p><h2 className="mt-2 font-serif text-2xl">We’d love to welcome you.</h2></div><Link to="/rooms" className="inline-flex min-h-11 items-center justify-center gap-2 bg-primary px-5 text-sm font-semibold text-ink transition-colors hover:bg-primary-dark">Explore our rooms <ArrowRight className="size-4" /></Link></Container></section>
+      <section className="bg-soft py-10 sm:py-12"><Container className="flex flex-col gap-5 border border-line bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7"><div><p className="type-eyebrow text-accent">Ready to picture your stay?</p><h2 className="mt-2 font-semibold tracking-tight text-2xl">We’d love to welcome you.</h2></div><Link to="/rooms" className="inline-flex min-h-11 items-center justify-center gap-2 bg-primary px-5 text-sm font-semibold text-ink transition-colors hover:bg-primary-dark">Explore our rooms <ArrowRight className="size-4" /></Link></Container></section>
 
       {activePhoto && <div className="gallery-lightbox fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 sm:p-8" role="dialog" aria-modal="true" aria-label={activePhoto.title} onClick={() => setActiveIndex(-1)}>
-        <button type="button" aria-label="Close image" onClick={() => setActiveIndex(-1)} className="absolute right-4 top-4 z-10 grid size-11 place-items-center border border-white/30 bg-black/30 text-white transition-colors hover:bg-white/15 sm:right-7 sm:top-7"><X className="size-5" /></button>
+        <button ref={closeButtonRef} type="button" aria-label="Close image" onClick={() => setActiveIndex(-1)} className="absolute right-4 top-4 z-10 grid size-11 place-items-center border border-white/30 bg-black/30 text-white transition-colors hover:bg-white/15 sm:right-7 sm:top-7"><X className="size-5" /></button>
         {visiblePhotos.length > 1 && <button type="button" aria-label="Previous image" onClick={(event) => { event.stopPropagation(); moveLightbox(-1); }} className="absolute left-3 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center border border-white/30 bg-black/30 text-white transition-colors hover:bg-white/15 sm:left-7"><ArrowLeft className="size-5" /></button>}
-        <figure className="gallery-lightbox-image relative flex max-h-full max-w-6xl flex-col items-center" onClick={(event) => event.stopPropagation()}><img src={activePhoto.src} alt={activePhoto.alt} className="max-h-[78vh] max-w-full object-contain" /><figcaption className="mt-4 text-center text-white"><p className="text-xs font-semibold uppercase tracking-[0.15em] text-white/60">{activePhoto.category}</p><p className="mt-1 text-lg font-medium">{activePhoto.title}</p><p className="mt-1 text-xs text-white/55">{activeIndex + 1} / {visiblePhotos.length}</p></figcaption></figure>
+        <figure className="gallery-lightbox-image relative flex max-h-full max-w-6xl flex-col items-center" onClick={(event) => event.stopPropagation()}><img key={activePhoto.id} src={activePhoto.full} alt={activePhoto.alt} className="max-h-[78vh] max-w-full bg-black object-contain" style={{ backgroundImage: `url(${activePhoto.src})`, backgroundSize: "contain", backgroundPosition: "center", backgroundRepeat: "no-repeat" }} /><figcaption className="mt-4 text-center text-white"><p className="text-xs font-semibold uppercase tracking-[0.15em] text-white/60">{activePhoto.category}</p><p className="mt-1 text-lg font-medium">{activePhoto.title}</p><p className="mt-1 text-xs text-white/55">{activeIndex + 1} / {visiblePhotos.length}</p></figcaption></figure>
         {visiblePhotos.length > 1 && <button type="button" aria-label="Next image" onClick={(event) => { event.stopPropagation(); moveLightbox(1); }} className="absolute right-3 top-1/2 z-10 grid size-11 -translate-y-1/2 place-items-center border border-white/30 bg-black/30 text-white transition-colors hover:bg-white/15 sm:right-7"><ArrowRight className="size-5" /></button>}
       </div>}
     </>

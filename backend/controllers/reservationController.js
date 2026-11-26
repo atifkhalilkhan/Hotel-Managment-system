@@ -3,6 +3,19 @@ import Room from "../models/Room.js";
 import User from "../models/User.js";
 import HousekeepingTask from "../models/HousekeepingTask.js";
 import { notifyRoles, notifyUsers } from "../utils/notifications.js";
+import { ensureReservationInvoice } from "../utils/invoices.js";
+
+// Invoice na ban sake to check-in/out nahi rukta (guest counter par khara hai);
+// ghalti log hoti hai aur staff Invoices page se baad mein bana sakta hai.
+const openInvoiceSafely = async (reservation, actorId) => {
+  try {
+    const { invoice } = await ensureReservationInvoice(reservation, actorId);
+    return invoice;
+  } catch (error) {
+    console.error(`Invoice for ${reservation.bookingCode} could not be created:`, error.message);
+    return null;
+  }
+};
 
 const DAY_MS = 24 * 60 * 60 * 1000;                    // ek din = itne milliseconds
 const ACTIVE_STATUSES = ["confirmed", "checked-in"];   // "zinda" bookings (jo room rokti hain)
@@ -300,6 +313,9 @@ export const checkIn = async (req, res, next) => {
     await reservation.save();
     await room.save();
 
+    // Check-in hote hi bill khul jaye, taake room service waghera ke charges jud saken
+    const invoice = await openInvoiceSafely(reservation, req.user._id);
+
     await reservation.populate([POPULATE_GUEST, POPULATE_ROOM]);
     await notifyUsers([reservation.guest._id], {
       type: "booking",
@@ -307,7 +323,7 @@ export const checkIn = async (req, res, next) => {
       message: `You are checked in to Room ${room.roomNumber}. Key card: ${keyCardNumber}.`,
       link: "/my-bookings",
     }, req.user._id);
-    res.json({ message: "Checked in", reservation });
+    res.json({ message: "Checked in", reservation, invoice: invoice ? { _id: invoice._id, invoiceNumber: invoice.invoiceNumber } : null });
   } catch (error) {
     next(error);
   }
@@ -330,6 +346,9 @@ export const checkOut = async (req, res, next) => {
     reservation.status = "checked-out";
     reservation.checkedOutAt = new Date();
     await reservation.save();
+
+    // Purani bookings jin ka check-in par invoice nahi bana tha: check-out par bill zaroor ho
+    await openInvoiceSafely(reservation, req.user._id);
 
     // Room safai ke liye, aur housekeeping ka task khud ban jaye
     if (room) {

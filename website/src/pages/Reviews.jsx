@@ -3,8 +3,15 @@ import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Pause, Play, Quote, S
 import Container from "../components/ui/Container";
 import Section from "../components/ui/Section";
 
-const API_BASE = (import.meta.env.VITE_API_URL || "http://localhost:2008/api").replace(/\/+$/, "");
+import { API_BASE } from "../lib/api";
 const PAGE_SIZE = 6;
+
+async function fetchReviewPage(page) {
+  const response = await fetch(`${API_BASE}/feedback/public?page=${page}&limit=${PAGE_SIZE}`);
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || "Reviews could not be loaded.");
+  return data;
+}
 
 function Stars({ value, size = "size-4" }) {
   return <span className="inline-flex items-center gap-1" aria-label={`${value} out of 5 stars`}>{Array.from({ length: 5 }, (_, index) => <Star key={index} className={`${size} ${index < value ? "fill-primary text-primary" : "text-line"}`} aria-hidden="true" />)}</span>;
@@ -37,26 +44,36 @@ export default function Reviews() {
   const [submitting, setSubmitting] = useState(false);
   const [formStatus, setFormStatus] = useState(null);
 
-  const loadReviews = useCallback(async (requestedPage = 1) => {
-    setLoading(true);
-    setLoadError("");
-    try {
-      const response = await fetch(`${API_BASE}/feedback/public?page=${requestedPage}&limit=${PAGE_SIZE}`);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.message || "Reviews could not be loaded.");
-      setReviews(data.feedback || []);
-      setSlide(0);
-      setPage(data.page || requestedPage);
-      setPages(Math.max(data.pages || 1, 1));
-      setTotal(data.total || 0);
-    } catch (error) {
-      setLoadError(error.message || "Unable to connect to the reviews service.");
-    } finally {
-      setLoading(false);
-    }
+  // Server se jawab aane par state bharo (sirf fetch ke baad chalta hai)
+  const applyReviews = useCallback((data, requestedPage) => {
+    setReviews(data.feedback || []);
+    setSlide(0);
+    setPage(data.page || requestedPage);
+    setPages(Math.max(data.pages || 1, 1));
+    setTotal(data.total || 0);
+    setLoading(false);
+  }, []);
+  const applyError = useCallback((error) => {
+    setLoadError(error.message || "Unable to connect to the reviews service.");
+    setLoading(false);
   }, []);
 
-  useEffect(() => { loadReviews(1); }, [loadReviews]);
+  // Buttons (page badalna, dobara koshish): pehle loading dikhao, phir lao
+  const loadReviews = (requestedPage = 1) => {
+    setLoading(true);
+    setLoadError("");
+    fetchReviewPage(requestedPage).then((data) => applyReviews(data, requestedPage), applyError);
+  };
+
+  // Pehli dafa: loading pehle se true hai
+  useEffect(() => {
+    let active = true;
+    fetchReviewPage(1).then(
+      (data) => active && applyReviews(data, 1),
+      (error) => active && applyError(error)
+    );
+    return () => { active = false; };
+  }, [applyReviews, applyError]);
 
   const slideCount = Math.ceil(reviews.length / 3);
   useEffect(() => {
@@ -103,9 +120,9 @@ export default function Reviews() {
             <h1 className="type-display mt-5 max-w-3xl text-white">A stay remembered.<br />A story <span className="text-primary">shared.</span></h1>
             <p className="type-body mt-5 max-w-2xl text-white">The little moments make a stay. Read what our guests remember, and share a moment of your own.</p>
           </div>
-          <div className="max-w-xs border-l-2 border-primary bg-black/35 px-5 py-4 backdrop-blur-[2px] sm:px-6">
+          <div className="max-w-xs border-l-2 border-primary bg-black/35 px-5 py-4 sm:px-6">
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-white/75">Guest feedback</p>
-            {total > 0 ? <p className="mt-2 flex items-center gap-2 text-2xl font-semibold text-white"><Star className="size-5 fill-primary text-primary" />{total}<span className="text-sm font-normal text-white/75">approved {total === 1 ? "review" : "reviews"}</span></p> : <p className="mt-2 font-serif text-xl text-white">Thoughts from every stay.</p>}
+            {total > 0 ? <p className="mt-2 flex items-center gap-2 text-2xl font-semibold text-white"><Star className="size-5 fill-primary text-primary" />{total}<span className="text-sm font-normal text-white/75">approved {total === 1 ? "review" : "reviews"}</span></p> : <p className="mt-2 font-semibold tracking-tight text-xl text-white">Thoughts from every stay.</p>}
             <a href="#share-review" className="mt-4 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-white transition-colors hover:text-primary">Share your experience <ArrowRight className="size-4" /></a>
           </div>
         </Container>

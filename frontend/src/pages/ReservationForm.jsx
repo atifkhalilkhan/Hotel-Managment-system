@@ -11,15 +11,35 @@ function getTodayString() {
   return new Date().toISOString().slice(0, 10);
 }
 
+// Public website ka booking bar ?checkIn=&checkOut=&guests=&type= bhejta hai
+const ROOM_TYPES = ["single", "double", "deluxe", "suite"];
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+function readBookingParams() {
+  const params = new URLSearchParams(window.location.search);
+  const today = getTodayString();
+  const checkIn = params.get("checkIn");
+  const checkOut = params.get("checkOut");
+  const guests = Number.parseInt(params.get("guests"), 10);
+  const type = params.get("type");
+  const validIn = DATE_PATTERN.test(checkIn || "") && checkIn >= today ? checkIn : today;
+  return {
+    checkIn: validIn,
+    checkOut: DATE_PATTERN.test(checkOut || "") && checkOut > validIn ? checkOut : "",
+    guests: Number.isInteger(guests) && guests >= 1 && guests <= 10 ? guests : 2,
+    type: ROOM_TYPES.includes(type) ? type : "any",
+  };
+}
+
 export default function ReservationForm() {
   const { user } = useAuth();
   const isGuest = user?.role === "guest";
   const steps = isGuest ? ["Dates", "Room", "Review"] : ["Dates", "Room", "Guest", "Review"];
   const [currentStep, setCurrentStep] = useState(0);
-  const [checkIn, setCheckIn] = useState(getTodayString());
-  const [checkOut, setCheckOut] = useState("");
-  const [guestsCount, setGuestsCount] = useState(2);
-  const [roomType, setRoomType] = useState("any");
+  const [initialBooking] = useState(readBookingParams);
+  const [checkIn, setCheckIn] = useState(initialBooking.checkIn);
+  const [checkOut, setCheckOut] = useState(initialBooking.checkOut);
+  const [guestsCount, setGuestsCount] = useState(initialBooking.guests);
+  const [roomType, setRoomType] = useState(initialBooking.type);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [availableRooms, setAvailableRooms] = useState([]);
   const [loadingRooms, setLoadingRooms] = useState(false);

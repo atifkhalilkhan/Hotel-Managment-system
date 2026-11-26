@@ -5,6 +5,28 @@ import HotelSettings from "../models/HotelSettings.js";
 const STATUSES = ["available", "occupied", "cleaning", "maintenance"];
 const ROOM_TYPES = ["single", "double", "deluxe", "suite"];
 const MAX_IMAGES = 5;
+const ACTIVE_RESERVATION_STATUSES = ["confirmed", "checked-in"]; // yehi bookings room rokti hain
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_PUBLIC_NIGHTS = 60;
+const MAX_PUBLIC_GUESTS = 10;
+
+// ---------- Helper: in dates par kaun se rooms booked hain ----------
+// Staff (/available) aur public website (/public/available) dono yahi use karte hain,
+// taake dono ka jawab hamesha ek jaisa ho. Overlap: purani ka check-in < nayi ka check-out
+// aur purani ka check-out > nayi ka check-in (wahi formula jo booking banate waqt lagta hai).
+const findBusyRoomIds = (from, to) =>
+  Reservation.find({
+    status: { $in: ACTIVE_RESERVATION_STATUSES },
+    checkIn: { $lt: to },
+    checkOut: { $gt: from },
+  }).distinct("room");
+
+// "YYYY-MM-DD" -> UTC aadhi raat ki Date (ghalat ho to null)
+const parseDateOnly = (value) => {
+  if (!DATE_ONLY.test(String(value || ""))) return null;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value ? null : date;
+};
 
 // ---------- Helper: form-data se list nikalna ----------
 // Form-data mein list text ki shakal mein aati hai: "WiFi, AC, TV" ya '["WiFi","AC"]'
@@ -168,6 +190,72 @@ export const getPublicRooms = async (req, res, next) => {
 };
 
 
+// ============ 2b. PUBLIC AVAILABILITY (website, bina login) ============
+// Misal: GET /api/rooms/public/available?checkIn=2026-12-01&checkOut=2026-12-05&guests=2&type=double
+// Sirf guest ko dikhne wali fields (room number, status waghera nahi). Booking ke waqt
+// createReservation dobara overlap check karta hai, is liye yahan se double booking nahi ho sakti.
+export const getPublicAvailableRooms = async (req, res, next) => {
+  try {
+    const from = parseDateOnly(req.query.checkIn);
+    const to = parseDateOnly(req.query.checkOut);
+    if (!from || !to) {
+      return res.status(400).json({ message: "Please choose valid check-in and check-out dates." });
+    }
+
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    // Ek din ki riayat: guest ka local "aaj" UTC se aage ho sakta hai
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    if (from < yesterday) {
+      return res.status(400).json({ message: "Check-in date cannot be in the past." });
+    }
+
+    const nights = Math.round((to - from) / (24 * 60 * 60 * 1000));
+    if (nights < 1) {
+      return res.status(400).json({ message: "Check-out must be after check-in." });
+    }
+    if (nights > MAX_PUBLIC_NIGHTS) {
+      return res.status(400).json({ message: `Online search covers stays of up to ${MAX_PUBLIC_NIGHTS} nights. Please contact reception for longer stays.` });
+    }
+
+    const guests = req.query.guests === undefined ? 1 : Number(req.query.guests);
+    if (!Number.isInteger(guests) || guests < 1 || guests > MAX_PUBLIC_GUESTS) {
+      return res.status(400).json({ message: `Guests must be between 1 and ${MAX_PUBLIC_GUESTS}.` });
+    }
+
+    const type = req.query.type || undefined;
+    if (type && !ROOM_TYPES.includes(type)) {
+      return res.status(400).json({ message: "Unknown room type." });
+    }
+
+    const busyRoomIds = await findBusyRoomIds(from, to);
+    const filter = {
+      _id: { $nin: busyRoomIds },
+      status: { $ne: "maintenance" },
+      capacity: { $gte: guests },
+    };
+    if (type) filter.type = type;
+
+    const rooms = await Room.find(filter)
+      .select("type pricePerNight capacity description amenities images.url")
+      .sort({ pricePerNight: 1 })
+      .lean();
+
+    res.json({
+      checkIn: req.query.checkIn,
+      checkOut: req.query.checkOut,
+      nights,
+      guests,
+      type: type || null,
+      total: rooms.length,
+      rooms,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 // ============ 3. AVAILABLE ROOMS (dates ke hisaab se) ============
 // Misal: GET /api/rooms/available?checkIn=2026-12-01&checkOut=2026-12-05&guests=2&type=double
 export const getAvailableRooms = async (req, res, next) => {
@@ -192,11 +280,7 @@ export const getAvailableRooms = async (req, res, next) => {
       }
 
       // In dates par jo rooms banay hue hain, un ki IDs nikalo (wahi overlap formula)
-      const busyRoomIds = await Reservation.find({
-        status: { $in: ["confirmed", "checked-in"] },
-        checkIn: { $lt: to },
-        checkOut: { $gt: from },
-      }).distinct("room");
+      const busyRoomIds = await findBusyRoomIds(from, to);
 
       // Busy rooms nikal do, aur maintenance wale bhi
       filter._id = { $nin: busyRoomIds };

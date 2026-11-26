@@ -5,7 +5,7 @@ import Logo from "../ui/Logo";
 import ButtonLink from "../ui/ButtonLink";
 import IconButton from "../ui/IconButton";
 import DesktopNav from "./DesktopNav";
-import { portalUrl, guestRegisterUrl, PORTAL_LOGIN } from "../../lib/portal";
+import { portalUrl, PORTAL_LOGIN } from "../../lib/portal";
 
 export default function Header({ scrolled, menuOpen, onOpenMenu, drawerId = "mobile-drawer" }) {
   return (
@@ -22,12 +22,12 @@ export default function Header({ scrolled, menuOpen, onOpenMenu, drawerId = "mob
         <DesktopNav />
 
         <div className="flex items-center gap-2">
-          <ButtonLink to={portalUrl(PORTAL_LOGIN)} variant="ghost" className="hidden lg:inline-flex">
+          <ButtonLink to={portalUrl(PORTAL_LOGIN)} variant="ghost" className="max-lg:hidden">
             <LogIn className="size-4" aria-hidden="true" />
             Log in
           </ButtonLink>
 
-          <ButtonLink to={guestRegisterUrl()} aria-label="Book now" className="px-3 sm:px-5">
+          <ButtonLink to="/rooms" aria-label="Book now" className="px-3 sm:px-5">
             <CalendarCheck className="size-4" aria-hidden="true" />
             <span className="hidden sm:inline">Book now</span>
           </ButtonLink>

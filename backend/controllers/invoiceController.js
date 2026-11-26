@@ -2,7 +2,7 @@ import Invoice from "../models/Invoice.js";
 import Reservation from "../models/Reservation.js";
 import { buildInvoicePdf } from "../utils/generateInvoicePdf.js";
 import { notifyUsers } from "../utils/notifications.js";
-import HotelSettings from "../models/HotelSettings.js";
+import { BILLABLE_STATUSES, ensureReservationInvoice } from "../utils/invoices.js";
 
 const round = (n) => Math.round(n * 100) / 100;
 
@@ -14,11 +14,6 @@ const POPULATE_RESERVATION = {
   populate: { path: "room", select: "roomNumber type floor" },
 };
 
-// INV-0001, INV-0002 ...
-const generateInvoiceNumber = async () => {
-  const count = await Invoice.countDocuments();
-  return `INV-${String(count + 1).padStart(4, "0")}`;
-};
 
 
 // ============ 1. INVOICE BANANA (booking se) ============
@@ -30,36 +25,17 @@ export const createInvoice = async (req, res, next) => {
     }
 
     // Sirf jo guest aa chuka hai (ya ja chuka hai) uska bill banta hai
-    if (!["checked-in", "checked-out"].includes(reservation.status)) {
+    if (!BILLABLE_STATUSES.includes(reservation.status)) {
       return res.status(400).json({ message: "Invoice can only be created after check-in" });
     }
 
-    const exists = await Invoice.findOne({ reservation: reservation._id });
-    if (exists) {
+    // Check-in par invoice ab khud ban jata hai; yeh button purani bookings ke liye hai
+    const { invoice, created } = await ensureReservationInvoice(reservation, req.user._id);
+    if (!created) {
       return res.status(400).json({ message: "Invoice already exists for this reservation" });
     }
 
-    const settings = await HotelSettings.findOne({ key: "default" }).select("taxRate").lean();
-    const envTaxRate = Number(process.env.TAX_RATE);
-    const taxRate = settings?.taxRate ?? (Number.isFinite(envTaxRate) && envTaxRate >= 0 ? envTaxRate : 0);
-    const invoice = new Invoice({
-      invoiceNumber: await generateInvoiceNumber(),
-      reservation: reservation._id,
-      guest: reservation.guest,
-      roomCharges: reservation.totalAmount,   // booking ka kiraya (copy)
-      taxRate,
-    });
-
-    invoice.recalculate();                    // subtotal, tax, total nikalo
-    await invoice.save();
-
     await invoice.populate([POPULATE_GUEST, POPULATE_RESERVATION]);
-    await notifyUsers([reservation.guest], {
-      type: "invoice",
-      title: "New invoice",
-      message: `Invoice ${invoice.invoiceNumber} is ready to review.`,
-      link: "/my-invoices",
-    }, req.user._id);
     res.status(201).json(invoice);
   } catch (error) {
     next(error);

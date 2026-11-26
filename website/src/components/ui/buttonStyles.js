@@ -1,11 +1,13 @@
 const base =
-  "inline-flex items-center justify-center gap-2 rounded-lg font-medium whitespace-nowrap transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex items-center justify-center gap-2 rounded-md font-semibold whitespace-nowrap transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50";
 
 const variants = {
   primary: "bg-primary text-ink hover:bg-primary-dark",
   dark: "bg-ink text-white hover:bg-ink/85",
   outline: "border border-line bg-white text-ink hover:border-ink",
   ghost: "text-ink hover:bg-soft",
+  // Tasveer ya dark background ke upar
+  inverse: "border border-white bg-ink/70 text-white hover:bg-white hover:text-ink",
   link: "text-ink underline decoration-line underline-offset-4 hover:decoration-primary",
 };
 

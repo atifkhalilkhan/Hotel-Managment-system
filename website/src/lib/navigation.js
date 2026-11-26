@@ -9,7 +9,7 @@ import {
   Car,
   SprayCan,
 } from "lucide-react";
-import { portalUrl, guestRegisterUrl, PORTAL_LOGIN, PORTAL_REGISTER } from "./portal";
+import { portalUrl, PORTAL_LOGIN, PORTAL_REGISTER } from "./portal";
 
 // Header, mobile drawer aur footer teeno yahin se bante hain
 export const mainNav = [
@@ -19,10 +19,10 @@ export const mainNav = [
     to: "/rooms",
     children: [
       { label: "All rooms", description: "See every room type and its rates", to: "/rooms", icon: LayoutGrid },
-      { label: "Single", description: "A quiet room for one traveller", to: "/rooms/single", icon: BedSingle },
-      { label: "Double", description: "A comfortable bed for two", to: "/rooms/double", icon: BedDouble },
-      { label: "Deluxe", description: "More space and a better view", to: "/rooms/deluxe", icon: Sofa },
-      { label: "Suite", description: "A separate living area for longer stays", to: "/rooms/suite", icon: Crown },
+      { label: "Single", description: "A quiet room for one traveller", to: "/rooms?type=single", icon: BedSingle },
+      { label: "Double", description: "A comfortable bed for two", to: "/rooms?type=double", icon: BedDouble },
+      { label: "Deluxe", description: "More space and a better view", to: "/rooms?type=deluxe", icon: Sofa },
+      { label: "Suite", description: "A separate living area for longer stays", to: "/rooms?type=suite", icon: Crown },
     ],
   },
   {
@@ -57,10 +57,10 @@ export const footerGroups = [
   {
     title: "Rooms",
     links: [
-      { label: "Single", to: "/rooms/single" },
-      { label: "Double", to: "/rooms/double" },
-      { label: "Deluxe", to: "/rooms/deluxe" },
-      { label: "Suite", to: "/rooms/suite" },
+      { label: "Single", to: "/rooms?type=single" },
+      { label: "Double", to: "/rooms?type=double" },
+      { label: "Deluxe", to: "/rooms?type=deluxe" },
+      { label: "Suite", to: "/rooms?type=suite" },
     ],
   },
   {
@@ -68,7 +68,7 @@ export const footerGroups = [
     links: [
       { label: "Log in", to: portalUrl(PORTAL_LOGIN) },
       { label: "Register", to: portalUrl(PORTAL_REGISTER) },
-      { label: "Book a stay", to: guestRegisterUrl() },
+      { label: "Book a stay", to: "/rooms" },
     ],
   },
   {

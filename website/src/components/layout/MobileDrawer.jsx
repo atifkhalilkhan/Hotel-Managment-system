@@ -9,7 +9,7 @@ import useLockBodyScroll from "../../hooks/useLockBodyScroll";
 import useEscapeKey from "../../hooks/useEscapeKey";
 import { mainNav } from "../../lib/navigation";
 import { hotelInfo } from "../../lib/hotelInfo";
-import { portalUrl, guestRegisterUrl, PORTAL_LOGIN } from "../../lib/portal";
+import { portalUrl, PORTAL_LOGIN } from "../../lib/portal";
 
 const row =
   "relative flex min-h-[52px] w-full items-center justify-between border-b border-line px-5 text-left text-base font-medium text-ink transition-colors hover:bg-soft";
@@ -164,7 +164,7 @@ export default function MobileDrawer({ open, onClose, id = "mobile-drawer" }) {
 
         <div className="shrink-0 border-t border-line bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))]">
           <div className="grid gap-3">
-            <ButtonLink to={guestRegisterUrl()} size="lg" className="w-full">
+            <ButtonLink to="/rooms" size="lg" className="w-full">
               <CalendarCheck className="size-4" aria-hidden="true" />
               Book now
             </ButtonLink>

@@ -28,7 +28,7 @@ export default function Services() {
           </div>
           <div className="border-l-2 border-primary bg-black/35 p-5 sm:p-6 lg:justify-self-end">
             <p className="type-eyebrow text-white/65">Here when you need us</p>
-            <p className="mt-3 font-serif text-2xl text-white">A helpful hand is always close by.</p>
+            <p className="mt-3 font-semibold tracking-tight text-2xl text-white">A helpful hand is always close by.</p>
             <div className="mt-5 flex items-center gap-3 border-t border-white/25 pt-4 text-sm text-white/90"><Phone className="size-4 text-primary" />{hotelInfo.phone}</div>
             <a href="#our-services" className="mt-5 inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-white transition-colors hover:text-primary">Explore our services <ArrowRight className="size-4" /></a>
           </div>
@@ -56,7 +56,7 @@ export default function Services() {
         <Container className="grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
           <div><p className="type-eyebrow text-accent">Simple as that</p><h2 className="type-h2 mt-3">How to request a service</h2><p className="type-body mt-4 text-muted">Already checked in? Send your request through the guest portal and keep track of it there.</p></div>
           <div className="grid gap-px border border-line bg-line sm:grid-cols-3">
-            {[{ n: "01", title: "Sign in", text: "Open your guest account." }, { n: "02", title: "Choose", text: "Select a service and share the details." }, { n: "03", title: "Track", text: "Follow your request from your stay page." }].map((step) => <div className="bg-white p-5 sm:p-6" key={step.n}><span className="font-serif text-xl text-primary-dark">{step.n}</span><h3 className="mt-3 text-sm font-semibold">{step.title}</h3><p className="mt-1 text-xs leading-5 text-muted">{step.text}</p></div>)}
+            {[{ n: "01", title: "Sign in", text: "Open your guest account." }, { n: "02", title: "Choose", text: "Select a service and share the details." }, { n: "03", title: "Track", text: "Follow your request from your stay page." }].map((step) => <div className="bg-white p-5 sm:p-6" key={step.n}><span className="font-semibold tracking-tight text-xl text-primary-dark">{step.n}</span><h3 className="mt-3 text-sm font-semibold">{step.title}</h3><p className="mt-1 text-xs leading-5 text-muted">{step.text}</p></div>)}
           </div>
           <div className="flex flex-col gap-4 border-t border-line pt-6 sm:flex-row sm:items-center sm:justify-between lg:col-span-2"><p className="text-sm text-muted">Service requests can be placed during an active, checked-in stay. Need help before arrival? Call reception.</p><div className="flex flex-wrap gap-3"><a href={telHref} className="inline-flex min-h-11 items-center justify-center gap-2 border border-line bg-white px-4 text-sm font-semibold transition-colors hover:border-ink"><Phone className="size-4" />Call reception</a><ButtonLink to={portalUrl(PORTAL_LOGIN)} className="inline-flex min-h-11 items-center gap-2">Open guest portal <ArrowRight className="size-4" /></ButtonLink></div></div>
         </Container>
