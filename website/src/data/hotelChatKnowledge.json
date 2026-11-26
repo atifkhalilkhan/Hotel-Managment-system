@@ -1,0 +1,11 @@
+[
+  { "keys": ["check in", "check-in", "arrival", "arrive"], "answer": "Check-in starts at 2:00 PM. For an early arrival request, please contact reception; it depends on room availability." },
+  { "keys": ["check out", "checkout", "check-out", "departure", "leave"], "answer": "Check-out is by 12:00 PM. Please ask reception about a late check-out; availability may vary." },
+  { "keys": ["reception", "open", "hours", "24 hour"], "answer": "Reception is open 24 hours. You can call +92 344 2845982." },
+  { "keys": ["room", "single", "double", "deluxe", "suite", "type"], "answer": "LuxuryStay offers single, double, deluxe and suite rooms. Visit the Rooms page to explore options and check availability." },
+  { "keys": ["service", "housekeeping", "transport", "wake", "room service"], "answer": "Room service, daily housekeeping, wake-up calls and transportation can be requested during your stay. Reception can advise on availability." },
+  { "keys": ["cancel", "cancellation", "change", "modify", "refund"], "answer": "Change and cancellation terms depend on your rate and booking channel. Please check your confirmation or contact reservations for help." },
+  { "keys": ["book", "booking", "reserve", "reservation", "availability"], "answer": "You can explore rooms and start a booking from our Rooms page. Your booking confirmation will include the final stay details." },
+  { "keys": ["contact", "phone", "call", "email", "address", "location"], "answer": "Call reception at +92 344 2845982 or email reservations@luxurystay.example. We are in City, Country." },
+  { "keys": ["payment", "pay", "price", "rate", "invoice"], "answer": "Your booking confirmation shows the applicable rate and payment details. Please contact reservations if anything is unclear." }
+]

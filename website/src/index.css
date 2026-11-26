@@ -5,8 +5,162 @@
   --color-primary: #F97316;
   --color-primary-dark: #EA580C;
   --color-primary-soft: #FFF3E8;
+  --color-accent: #C2410C;
   --color-ink: #111111;
+  --color-soft: #F7F7F5;
   --color-line: #E5E5E5;
   --color-muted: #6B7280;
-  --color-soft: #F7F7F5;
 }
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+  }
+  body {
+    @apply bg-white font-sans text-ink antialiased;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *, *::before, *::after {
+      transition-duration: 0.01ms !important;
+      animation-duration: 0.01ms !important;
+    }
+  }
+}
+
+/* Text styles: poori website mein bas yahi use honge */
+@utility type-display {
+  font-size: clamp(2.5rem, 6vw, 4.5rem);
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+}
+@utility type-h2 {
+  font-size: clamp(2rem, 4vw, 3rem);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.015em;
+}
+@utility type-h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+@utility type-eyebrow {
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+@utility type-body {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+@keyframes reviews-slide-in {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.reviews-slide-in {
+  animation: reviews-slide-in 520ms cubic-bezier(.2,.75,.25,1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reviews-slide-in { animation: none; }
+}
+
+@keyframes about-enter {
+  from { opacity: 0; transform: translateY(22px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.about-enter { animation: about-enter 650ms cubic-bezier(.2,.75,.25,1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .about-enter { animation: none; }
+}
+
+@keyframes gallery-enter {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes gallery-lightbox-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes gallery-image-enter {
+  from { opacity: 0; transform: scale(.975); }
+  to { opacity: 1; transform: scale(1); }
+}
+.gallery-enter { animation: gallery-enter 700ms cubic-bezier(.2,.75,.25,1) both; }
+.gallery-tile { animation: gallery-enter 600ms cubic-bezier(.2,.75,.25,1) both; }
+.gallery-lightbox { animation: gallery-lightbox-enter 180ms ease-out both; }
+.gallery-lightbox-image { animation: gallery-image-enter 260ms cubic-bezier(.2,.75,.25,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .gallery-enter, .gallery-tile, .gallery-lightbox, .gallery-lightbox-image { animation: none; }
+}
+
+@keyframes home-rise {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.home-hero-copy { animation: home-rise 750ms cubic-bezier(.2,.75,.25,1) both; }
+.home-hero-note { animation: home-rise 750ms 140ms cubic-bezier(.2,.75,.25,1) both; }
+.home-hero-slide { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.025); transition: opacity 850ms ease, transform 7s ease; }
+.home-hero-slide.is-active { opacity: 1; transform: scale(1); }
+.home-hero-bottom {
+  position: absolute;
+  right: max(1.25rem, calc((100vw - 1200px) / 2));
+  bottom: 1.1rem;
+  left: max(1.25rem, calc((100vw - 1200px) / 2));
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  border-top: 1px solid rgb(255 255 255 / 30%);
+  padding-top: .7rem;
+  color: rgb(255 255 255 / 65%);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .15em;
+}
+.home-hero-pagination { display: flex; align-items: center; gap: .55rem; margin-left: auto; }
+.home-hero-pagination button { width: 1.45rem; height: .35rem; padding: 0; border: 0; border-radius: 999px; background: rgb(255 255 255 / 45%); cursor: pointer; transition: width 180ms ease, background-color 180ms ease; }
+.home-hero-pagination button.is-active { width: 2.2rem; background: #f97316; }
+.home-hero-pagination button:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+.home-reveal { opacity: 0; transform: translateY(18px); }
+.home-reveal.is-visible { animation: home-rise 600ms var(--home-delay, 0ms) cubic-bezier(.2,.75,.25,1) both; }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.amenity-arc-viewport { position: relative; left: 50%; width: 100vw; height: clamp(320px, 34vw, 380px); overflow-x: auto; overflow-y: hidden; transform: translateX(-50%); perspective: 1100px; scroll-behavior: smooth; scroll-snap-type: x mandatory; cursor: grab; user-select: none; }
+.amenity-arc-viewport:active { cursor: grabbing; }
+.amenity-arc-track { display: flex; width: max-content; height: 100%; gap: clamp(2px, .35vw, 5px); padding-inline: 12px; }
+.amenity-arc-slot { width: clamp(210px, 23vw, 290px); min-width: 0; flex: 0 0 clamp(210px, 23vw, 290px); height: 84%; scroll-snap-align: center; }
+.amenity-arc-card { display: block; width: 100%; height: 100%; overflow: hidden; border-radius: 6px; box-shadow: 0 5px 14px rgb(24 19 13 / 11%); transform: perspective(900px) rotateY(var(--arc-turn, 0deg)); transform-origin: center; transition: transform 450ms ease, box-shadow 450ms ease; }
+.amenity-arc-card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.amenity-arc-card:hover { z-index: 1; transform: perspective(900px) rotateY(0deg) translateY(-4px) scale(1.015); box-shadow: 0 9px 18px rgb(24 19 13 / 16%); }
+.amenity-arc-card:focus-visible { outline: 3px solid #f97316; outline-offset: 3px; }
+.amenity-arc-notes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid rgb(17 17 17 / 12%); }
+.amenity-arc-notes > div + div { border-left: 1px solid rgb(17 17 17 / 12%); }
+@media (max-width: 639px) {
+  .amenity-arc-viewport { height: 300px; }
+  .amenity-arc-slot { width: clamp(190px, 58vw, 235px); flex-basis: clamp(190px, 58vw, 235px); }
+  .amenity-arc-notes article { padding-inline: .55rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .home-hero-copy, .home-hero-note { animation: none; }
+  .home-hero-slide, .home-hero-pagination button { transition: none; }
+  .amenity-arc-card { transition: none; }
+  .amenity-arc-viewport { scroll-behavior: auto; }
+  .home-reveal, .home-reveal.is-visible { opacity: 1; transform: none; animation: none; }
+}
+

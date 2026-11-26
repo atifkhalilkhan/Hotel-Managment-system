@@ -1,5 +1,9 @@
 # React + Vite
 
+## Contact form
+
+The contact page sends enquiries through Web3Forms. Create a local `.env` file from `.env.example`, then set `VITE_WEB3FORMS_ACCESS_KEY` to the access key Web3Forms emails you after creating the form. Restart the Vite dev server after adding the key. The access key is used by the browser form as described in the [Web3Forms React guide](https://docs.web3forms.com/how-to-guides/js-frameworks/react-js/simple-react-contact-form).
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

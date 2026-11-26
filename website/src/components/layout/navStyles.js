@@ -1,0 +1,2 @@
+export const navLinkClass =
+  "relative inline-flex items-center gap-1 py-2 text-sm font-medium text-ink after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-200 hover:after:scale-x-100";
